@@ -93,8 +93,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                     {stats.core > 0 && (
                       <Chip label={`${stats.core} Core`} size="small" color="error" sx={{ height: 18, fontSize: 10 }} />
                     )}
-                    {stats.commitment > 0 && (
-                      <Chip label={`${stats.commitment} CM`} size="small" color="primary" sx={{ height: 18, fontSize: 10 }} />
+                    {stats.prevNC > 0 && (
+                      <Chip label={`${stats.prevNC} Prev NC`} size="small" color="warning" sx={{ height: 18, fontSize: 10 }} />
                     )}
                   </Box>
                 </Box>

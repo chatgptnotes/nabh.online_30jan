@@ -137,6 +137,20 @@ export default function Dashboard() {
               </Box>
               <Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant="body2">Previous NC</Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {stats.prevNC}
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={(stats.prevNC / stats.total) * 100}
+                  color="warning"
+                  sx={{ height: 8, borderRadius: 4 }}
+                />
+              </Box>
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                   <Typography variant="body2">Commitment</Typography>
                   <Typography variant="body2" fontWeight={600}>
                     {stats.commitment}

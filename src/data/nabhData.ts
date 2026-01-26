@@ -671,11 +671,12 @@ export const getChapterStats = (chapter: Chapter) => {
   const blocked = chapter.objectives.filter((o) => o.status === 'Blocked').length;
   const notStarted = chapter.objectives.filter((o) => o.status === 'Not started').length;
   const core = chapter.objectives.filter((o) => o.isCore).length;
+  const prevNC = chapter.objectives.filter((o) => o.priority === 'Prev NC').length;
   const commitment = chapter.objectives.filter((o) => o.category === 'Commitment').length;
   const achievement = chapter.objectives.filter((o) => o.category === 'Achievement').length;
   const excellence = chapter.objectives.filter((o) => o.category === 'Excellence').length;
 
-  return { total, completed, inProgress, blocked, notStarted, core, commitment, achievement, excellence };
+  return { total, completed, inProgress, blocked, notStarted, core, prevNC, commitment, achievement, excellence };
 };
 
 export const getOverallStats = () => {
@@ -685,6 +686,7 @@ export const getOverallStats = () => {
   let blocked = 0;
   let notStarted = 0;
   let core = 0;
+  let prevNC = 0;
   let commitment = 0;
   let achievement = 0;
   let excellence = 0;
@@ -697,10 +699,11 @@ export const getOverallStats = () => {
     blocked += stats.blocked;
     notStarted += stats.notStarted;
     core += stats.core;
+    prevNC += stats.prevNC;
     commitment += stats.commitment;
     achievement += stats.achievement;
     excellence += stats.excellence;
   });
 
-  return { total, completed, inProgress, blocked, notStarted, core, commitment, achievement, excellence };
+  return { total, completed, inProgress, blocked, notStarted, core, prevNC, commitment, achievement, excellence };
 };
