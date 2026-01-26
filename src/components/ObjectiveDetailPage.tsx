@@ -855,16 +855,19 @@ Generate the complete HTML with all sections filled in appropriately based on th
   const postProcessHTML = (html: string): string => {
     let processed = html;
 
-    // COMPLETELY REPLACE the entire header section
+    // 1. REMOVE the tagline div completely (handles nested divs issue)
+    processed = processed.replace(/<div[^>]*class="tagline"[^>]*>[\s\S]*?<\/div>/gi, '');
+
+    // 2. Remove tagline text anywhere it appears
+    processed = processed.replace(/Assured\s*\|\s*Committed\s*\|\s*Proficient/gi, '');
+
+    // 3. Fix the logo - replace any logo with correct one
     processed = processed.replace(
-      /<div class="header"[^>]*>[\s\S]*?<\/div>/gi,
-      `<div class="header" style="text-align: center; border-bottom: 3px solid #1565C0; padding-bottom: 10px; margin-bottom: 20px;">
-        <img src="${logoUrl}" alt="Hope Hospital" style="width: 180px; height: auto; margin: 0 auto 5px; display: block;" onerror="this.style.display='none'">
-        <div style="font-size: 11px; color: #666;">${hospitalConfig.address} | Phone: +91-9373111709</div>
-      </div>`
+      /<img[^>]*class="logo"[^>]*>/gi,
+      `<img src="${logoUrl}" alt="Hope Hospital" class="logo" style="width: 180px; height: auto; margin: 0 auto 5px; display: block;" onerror="this.style.display='none'">`
     );
 
-    // Replace any remaining logo placeholders
+    // 4. Replace logo placeholders
     processed = processed.replace(
       /<div class="logo-area">[\s\S]*?<\/div>/gi,
       `<img src="${logoUrl}" alt="Hope Hospital" style="width: 180px; height: auto; margin: 0 auto 5px; display: block;">`
@@ -874,12 +877,13 @@ Generate the complete HTML with all sections filled in appropriately based on th
       `<img src="${logoUrl}" alt="Hope Hospital" style="width: 180px; height: auto;">`
     );
 
-    // Remove ALL instances of tagline
-    processed = processed.replace(/<div class="tagline"[^>]*>[\s\S]*?<\/div>/gi, '');
-    processed = processed.replace(/Assured\s*\|\s*Committed\s*\|\s*Proficient/gi, '');
-    processed = processed.replace(/<[^>]*>Assured[^<]*Proficient<\/[^>]*>/gi, '');
+    // 5. Fix hospital-address div to have correct phone
+    processed = processed.replace(
+      /<div[^>]*class="hospital-address"[^>]*>[\s\S]*?<\/div>/gi,
+      `<div class="hospital-address" style="font-size: 11px; color: #666;">${hospitalConfig.address} | Phone: +91-9373111709</div>`
+    );
 
-    // Fix dates
+    // 6. Fix dates
     processed = processed.replace(/Date:\s*<\/div>/gi, `Date: ${effectiveDate}</div>`);
     processed = processed.replace(/Date:\s*$/gm, `Date: ${effectiveDate}`);
     processed = processed.replace(/\[DD\/MM\/YYYY\]/g, effectiveDate);
@@ -887,7 +891,7 @@ Generate the complete HTML with all sections filled in appropriately based on th
     processed = processed.replace(/Effective Date<\/th><td>[^<]*<\/td>/gi, `Effective Date</th><td>${effectiveDate}</td>`);
     processed = processed.replace(/Review Date<\/th><td>[^<]*<\/td>/gi, `Review Date</th><td>${reviewDate}</td>`);
 
-    // Fix signature sections
+    // 7. Fix signature sections
     processed = processed.replace(
       /Name:\s*(Quality Manager|Quality Officer|Staff|Prepared By Staff|\[Name\])?(\s*<br|\s*$)/gi,
       `Name: Jagruti$2`
@@ -901,7 +905,7 @@ Generate the complete HTML with all sections filled in appropriately based on th
       `Signature: <div style="font-family: 'Brush Script MT', cursive; font-size: 16px; color: #0D47A1; margin-top: 5px;">Sd/-</div></td>`
     );
 
-    // Ensure Dr. Shiraz Sheikh is in Approved By
+    // 8. Ensure Dr. Shiraz Sheikh is in Approved By
     if (!processed.includes('Dr. Shiraz Sheikh') && processed.includes('APPROVED BY')) {
       processed = processed.replace(
         /APPROVED BY<\/th>[\s\S]*?<td>([\s\S]*?)<\/td>/i,
@@ -914,22 +918,19 @@ Generate the complete HTML with all sections filled in appropriately based on th
       );
     }
 
-    // COMPLETELY REPLACE footer
+    // 9. Fix footer - find and replace the content inside footer div
+    // First, replace "Dr. Murali's Hope Hospital" with "Hope Hospital" everywhere
+    processed = processed.replace(/Dr\.\s*Murali'?s\s+Hope\s+Hospital/gi, 'Hope Hospital');
+
+    // Then fix phone numbers in footer
     processed = processed.replace(
-      /<div class="footer"[^>]*>[\s\S]*?<\/div>/gi,
-      `<div class="footer" style="margin-top: 30px; padding-top: 15px; border-top: 2px solid #1565C0; text-align: center; font-size: 10px; color: #666;">
-        <strong>Hope Hospital</strong> | ${hospitalConfig.address}<br>
-        Phone: +91-9373111709 | Email: ${hospitalConfig.email} | Website: ${hospitalConfig.website}<br>
-        This is a controlled document. Unauthorized copying or distribution is prohibited.
-      </div>`
+      /Phone:\s*\+?91-?X+|\+91-XXXX-XXXXXX/gi,
+      'Phone: +91-9373111709'
     );
 
-    // Also replace footer text content directly
-    processed = processed.replace(/Dr\.\s*Murali's\s*Hope\s*Hospital/gi, 'Hope Hospital');
-
-    // COMPLETELY REPLACE stamp area
+    // 10. Fix stamp area content
     processed = processed.replace(
-      /<div class="stamp-area"[^>]*>[\s\S]*?<\/div>/gi,
+      /<div[^>]*class="stamp-area"[^>]*>([\s\S]*?)<\/div>/gi,
       `<div class="stamp-area" style="border: 2px solid #1565C0; border-radius: 10px; padding: 15px; text-align: center; margin: 20px 0; background: #f8f9fa;">
         <div style="font-weight: bold; color: #1565C0; font-size: 14px;">DR. MURALI'S HOPE HOSPITAL</div>
         <div style="font-weight: 600; margin-top: 5px;">QUALITY MANAGEMENT SYSTEM</div>
@@ -937,9 +938,12 @@ Generate the complete HTML with all sections filled in appropriately based on th
       </div>`
     );
 
-    // Fix margins
+    // 11. Fix margins
     processed = processed.replace(/margin:\s*0\s*auto\s*10px/gi, 'margin: 0 auto 5px');
     processed = processed.replace(/margin-bottom:\s*10px/gi, 'margin-bottom: 5px');
+
+    // 12. Final cleanup - remove any remaining tagline text
+    processed = processed.replace(/>\s*Assured\s*\|\s*Committed\s*\|\s*Proficient\s*</gi, '><');
 
     return processed;
   };
