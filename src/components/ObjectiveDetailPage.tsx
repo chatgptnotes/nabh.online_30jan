@@ -655,8 +655,10 @@ Format your response as a numbered list (1-10) with each evidence item on a new 
   const effectiveDate = getFormattedDate(documentDate);
   const reviewDate = getFormattedDate(new Date(documentDate.getFullYear() + 1, documentDate.getMonth(), documentDate.getDate()));
 
-  // Logo URL (use absolute URL for generated documents)
-  const logoUrl = `${window.location.origin}/hospital-logo.png`;
+  // Logo URL - use production URL for generated documents stored in database
+  const logoUrl = window.location.hostname === 'localhost'
+    ? `${window.location.origin}/hospital-logo.png`
+    : 'https://www.nabh.online/hospital-logo.png';
 
   // Get the HTML template for evidence documents
   const getEvidenceDocumentPrompt = () => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for Hope Hospital.
@@ -933,7 +935,19 @@ Generate the complete HTML with all sections filled in appropriately based on th
       ''
     );
 
-    // 4b. Inject logo into header if not present - replace hospital name at top with logo + name
+    // 4b. Replace placeholder boxes (gray boxes, empty divs for logo)
+    // Match any div that looks like a placeholder box with specific dimensions
+    processed = processed.replace(
+      /<div[^>]*style="[^"]*(?:width:\s*(?:80|100|120|150|180)px[^"]*height:\s*(?:60|80|100)px|height:\s*(?:60|80|100)px[^"]*width:\s*(?:80|100|120|150|180)px)[^"]*(?:background|border)[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+      logoImg
+    );
+    // Match placeholder text patterns
+    processed = processed.replace(
+      /\[?(?:Logo|Hospital\s*Logo|Logo\s*Here|Insert\s*Logo)\]?/gi,
+      logoImg
+    );
+
+    // 4c. Inject logo into header if not present - replace hospital name at top with logo + name
     if (!processed.includes(logoUrl)) {
       // Replace the first "Hope Hospital" heading with logo + name
       processed = processed.replace(
@@ -944,6 +958,11 @@ Generate the complete HTML with all sections filled in appropriately based on th
       processed = processed.replace(
         /<div[^>]*class="hospital-name"[^>]*>Hope Hospital<\/div>/i,
         `<div style="text-align: center;">${logoImg}<div class="hospital-name" style="margin-top: 5px; font-size: 20px; font-weight: bold; color: #1565C0;">Hope Hospital</div></div>`
+      );
+      // Insert logo at the very beginning of header div if no logo found
+      processed = processed.replace(
+        /<div[^>]*class="header"[^>]*>/i,
+        `<div class="header" style="text-align: center;">${logoImg}`
       );
     }
 
