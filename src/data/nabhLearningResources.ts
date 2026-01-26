@@ -351,81 +351,452 @@ export const learningResources: Record<string, LearningResource> = {
   },
 
   // ============================================================================
-  // COP - Care of Patients
+  // COP - Care of Patients (NABH SHCO 3rd Edition)
   // ============================================================================
 
+  // COP.1 - Uniform care to patients is provided in all settings
   'COP.1.a': {
-    hindiExplanation: 'सभी मरीजों की देखभाल एक जैसी होनी चाहिए। अमीर हो या गरीब, सबके लिए इलाज का तरीका एक जैसा होना चाहिए।',
+    hindiExplanation: 'संस्था में मरीजों की पहचान के लिए एक समान प्रक्रिया होनी चाहिए जिसमें कम से कम दो पहचानकर्ताओं (identifiers) का उपयोग अनिवार्य है। उदाहरण के लिए, मरीज का नाम और UHID नंबर, या नाम और जन्म तिथि। यह सुनिश्चित करता है कि कोई भी दवाई, जांच या प्रक्रिया गलत मरीज को न दी जाए। हर बार मरीज से संपर्क करते समय, दोनों पहचानकर्ताओं की पुष्टि करना अनिवार्य है। यह CORE element है और मरीज सुरक्षा के लिए अत्यंत महत्वपूर्ण है।',
     youtubeVideos: [
-      { title: 'Patient Care Planning', url: 'https://www.youtube.com/watch?v=9IlTmKxRVPnE', description: 'Uniform care planning process' },
+      { title: 'Patient Identification IPSG', url: 'https://www.youtube.com/watch?v=9IlTmKxRVPnE', description: 'Two identifier patient identification process' },
     ],
   },
   'COP.1.b': {
-    hindiExplanation: 'मरीज का इलाज उसकी जांच के हिसाब से होना चाहिए। पहले जांच करो, फिर तय करो कि क्या इलाज करना है।',
+    hindiExplanation: 'मरीजों की देखभाल लागू कानूनों और नियमों के अनुसार प्रदान की जानी चाहिए। इसमें MTP Act, PCPNDT Act, Transplantation of Human Organs Act, Mental Healthcare Act, और अन्य स्वास्थ्य संबंधी कानून शामिल हैं। संस्था को यह सुनिश्चित करना होगा कि सभी चिकित्सा प्रक्रियाएं वैधानिक आवश्यकताओं के अनुरूप हों और कर्मचारियों को इन कानूनों की जानकारी हो।',
     youtubeVideos: [
-      { title: 'Assessment Based Care', url: 'https://www.youtube.com/watch?v=AIlTmKxRVPnE', description: 'Care based on assessment' },
+      { title: 'Healthcare Laws India', url: 'https://www.youtube.com/watch?v=AIlTmKxRVPnE', description: 'Legal compliance in healthcare' },
     ],
   },
   'COP.1.c': {
-    hindiExplanation: 'इलाज का लक्ष्य साफ होना चाहिए। जैसे - बुखार उतारना है, दर्द कम करना है, घाव भरना है। ये लक्ष्य ऐसे हों जो पूरे हो सकें।',
+    hindiExplanation: 'संस्था को साक्ष्य-आधारित नैदानिक अभ्यास दिशानिर्देशों (evidence-based clinical practice guidelines) और/या क्लिनिकल प्रोटोकॉल को अपनाना चाहिए जो एक समान मरीज देखभाल का मार्गदर्शन करें। इसका अर्थ है कि उपचार के निर्णय वैज्ञानिक शोध और सर्वोत्तम प्रथाओं पर आधारित होने चाहिए, न कि केवल व्यक्तिगत अनुभव पर। ये दिशानिर्देश विभिन्न बीमारियों के लिए मानक उपचार प्रोटोकॉल प्रदान करते हैं।',
     youtubeVideos: [
-      { title: 'Setting Care Goals', url: 'https://www.youtube.com/watch?v=BIlTmKxRVPnE', description: 'Setting achievable care goals' },
+      { title: 'Clinical Practice Guidelines', url: 'https://www.youtube.com/watch?v=BIlTmKxRVPnE', description: 'Evidence-based clinical protocols' },
     ],
   },
   'COP.1.d': {
-    hindiExplanation: 'इलाज की पूरी योजना मरीज की फाइल में लिखी होनी चाहिए। जो भी देखभाल करे, उसे यह पढ़ने को मिलनी चाहिए।',
+    hindiExplanation: 'जब एक जैसी नैदानिक स्थिति के लिए एक से अधिक स्थानों पर देखभाल प्रदान की जाती है, तो देखभाल का तरीका एक समान होना चाहिए। उदाहरण के लिए, OPD, IPD, ICU या Emergency में एक ही बीमारी के लिए उपचार प्रोटोकॉल समान होना चाहिए। इससे देखभाल की गुणवत्ता में एकरूपता सुनिश्चित होती है और मरीज को कहीं भी समान स्तर की सेवा मिलती है।',
     youtubeVideos: [
-      { title: 'Documenting Care Plan', url: 'https://www.youtube.com/watch?v=CIlTmKxRVPnE', description: 'Care plan documentation' },
+      { title: 'Uniform Care Delivery', url: 'https://www.youtube.com/watch?v=CIlTmKxRVPnE', description: 'Standardized care across settings' },
+    ],
+  },
+  'COP.1.e': {
+    hindiExplanation: 'टेलीमेडिसिन सुविधा लिखित मार्गदर्शन के आधार पर सुरक्षित और संरक्षित तरीके से प्रदान की जानी चाहिए। इसमें वीडियो परामर्श, ई-प्रिस्क्रिप्शन और दूरस्थ निगरानी शामिल है। टेलीमेडिसिन प्रैक्टिस गाइडलाइंस 2020 के अनुसार, डॉक्टर की पहचान, मरीज की सहमति, डेटा गोपनीयता और दवाई के प्रिस्क्रिप्शन के नियमों का पालन अनिवार्य है।',
+    youtubeVideos: [
+      { title: 'Telemedicine Guidelines India', url: 'https://www.youtube.com/watch?v=TeleMedNABH', description: 'Safe telemedicine practices' },
     ],
   },
 
-  // COP.2 - High risk patients
+  // COP.2 - Emergency services including ambulance, and management of disasters
   'COP.2.a': {
-    hindiExplanation: 'कुछ मरीजों को ज्यादा खतरा होता है, जैसे - बुजुर्ग, छोटे बच्चे, गर्भवती महिलाएं। इनकी पहचान और खास देखभाल के लिए नियम होने चाहिए।',
+    hindiExplanation: 'संस्था में एक पहचाने गए क्षेत्र का होना आवश्यक है जो आपातकालीन मरीजों को प्राप्त करने और प्रबंधित करने के लिए आसानी से सुलभ हो, और जहां पर्याप्त एवं उचित संसाधन उपलब्ध हों। इस क्षेत्र में पर्याप्त बेड, आपातकालीन उपकरण, दवाइयां और प्रशिक्षित स्टाफ होना चाहिए। यह क्षेत्र मुख्य प्रवेश द्वार के पास होना चाहिए ताकि एम्बुलेंस आसानी से पहुंच सके।',
     youtubeVideos: [
-      { title: 'High Risk Patient Identification', url: 'https://www.youtube.com/watch?v=DIlTmKxRVPnE', description: 'Identifying high risk patients' },
+      { title: 'Emergency Department Setup', url: 'https://www.youtube.com/watch?v=DIlTmKxRVPnE', description: 'Setting up emergency area' },
     ],
   },
   'COP.2.b': {
-    hindiExplanation: 'इमरजेंसी में आए मरीजों की खास देखभाल होनी चाहिए। इमरजेंसी में क्या करना है, इसके नियम साफ होने चाहिए।',
+    hindiExplanation: 'संस्था मेडिको-लीगल केसों (MLC) का प्रबंधन करती है और वैधानिक आवश्यकताओं के अनुसार तथा लिखित मार्गदर्शन के अनुरूप आपातकालीन देखभाल प्रदान करती है। इसमें पुलिस को सूचना देना, MLC रजिस्टर में दर्ज करना, साक्ष्य संरक्षण, और कानूनी दस्तावेज़ीकरण शामिल है। दुर्घटना, मारपीट, आत्महत्या का प्रयास, विषाक्तता, और संदिग्ध मृत्यु के मामलों में MLC प्रक्रिया का पालन अनिवार्य है। यह CORE element है।',
     youtubeVideos: [
-      { title: 'Emergency Patient Care', url: 'https://www.youtube.com/watch?v=EIlTmKxRVPnE', description: 'Care of emergency patients' },
+      { title: 'MLC Management Hospital', url: 'https://www.youtube.com/watch?v=EIlTmKxRVPnE', description: 'Medico-legal case handling' },
+    ],
+  },
+  'COP.2.c': {
+    hindiExplanation: 'उचित देखभाल की शुरुआत ट्राइएज प्रणाली द्वारा निर्देशित होती है। ट्राइएज का अर्थ है मरीजों को उनकी गंभीरता के आधार पर वर्गीकृत करना ताकि सबसे गंभीर मरीज को पहले देखा जाए। रंग-कोडित ट्राइएज प्रणाली (लाल - तत्काल, पीला - आपातकालीन, हरा - साधारण, काला - मृत/असंभव) का उपयोग किया जाना चाहिए। प्रशिक्षित स्टाफ द्वारा ट्राइएज किया जाना चाहिए।',
+    youtubeVideos: [
+      { title: 'Emergency Triage System', url: 'https://www.youtube.com/watch?v=TriageNABH', description: 'Color-coded triage in emergency' },
+    ],
+  },
+  'COP.2.d': {
+    hindiExplanation: 'आपातकालीन विभाग में प्रतीक्षा कर रहे मरीजों का उनकी स्थिति में परिवर्तन के लिए उचित अंतराल पर पुनर्मूल्यांकन किया जाना चाहिए। यदि मरीज की स्थिति बिगड़ती है तो तुरंत ध्यान दिया जाना चाहिए। पुनर्मूल्यांकन का समय और निष्कर्ष दस्तावेजित होना चाहिए। यह सुनिश्चित करता है कि प्रतीक्षा के दौरान किसी मरीज की स्थिति खराब न हो।',
+    youtubeVideos: [
+      { title: 'Patient Reassessment Emergency', url: 'https://www.youtube.com/watch?v=ReassessED', description: 'Reassessing waiting patients' },
+    ],
+  },
+  'COP.2.e': {
+    hindiExplanation: 'भर्ती, घर छुट्टी या अन्य संस्था में स्थानांतरण का दस्तावेजीकरण किया जाना चाहिए, और मरीज को डिस्चार्ज नोट दिया जाना चाहिए। डिस्चार्ज नोट में निदान, दी गई दवाइयां, फॉलो-अप निर्देश और आपातकालीन संपर्क नंबर होना चाहिए। यदि मरीज को स्थानांतरित किया जाता है तो रेफरल समरी भी प्रदान की जानी चाहिए।',
+    youtubeVideos: [
+      { title: 'Emergency Discharge Process', url: 'https://www.youtube.com/watch?v=EDDischarge', description: 'Documentation at ED discharge' },
+    ],
+  },
+  'COP.2.f': {
+    hindiExplanation: 'संस्था को गुणवत्ता आश्वासन कार्यक्रम (Quality Assurance Programme) लागू करना चाहिए। इसमें आपातकालीन विभाग के संकेतकों (indicators) की निगरानी शामिल है जैसे - ट्राइएज समय, प्रतीक्षा समय, उपचार शुरू करने में लगा समय, पुनः आगमन दर, और मृत्यु दर। इन संकेतकों का विश्लेषण करके सुधार के अवसर खोजे जाने चाहिए।',
+    youtubeVideos: [
+      { title: 'Emergency QA Program', url: 'https://www.youtube.com/watch?v=EDQA', description: 'Quality assurance in emergency' },
+    ],
+  },
+  'COP.2.g': {
+    hindiExplanation: 'संस्था के पास आगमन पर मृत पाए गए मरीजों (Brought Dead) और आगमन के कुछ मिनटों के भीतर मृत्यु हुए मरीजों के प्रबंधन के लिए प्रणाली होनी चाहिए। इसमें मृत्यु की घोषणा, परिवार को सूचना, MLC प्रक्रिया (यदि लागू हो), शव का संरक्षण, और दस्तावेजीकरण की प्रक्रियाएं शामिल हैं। इन मामलों में संवेदनशीलता और कानूनी आवश्यकताओं का पालन आवश्यक है।',
+    youtubeVideos: [
+      { title: 'Brought Dead Protocol', url: 'https://www.youtube.com/watch?v=BroughtDead', description: 'Managing brought dead cases' },
+    ],
+  },
+  'COP.2.h': {
+    hindiExplanation: 'संस्था के पास उसके द्वारा प्रदान की जाने वाली सेवाओं के अनुरूप एम्बुलेंस सेवाओं तक पहुंच होनी चाहिए। एम्बुलेंस सेवा स्वयं की हो सकती है या तीसरे पक्ष की। महत्वपूर्ण यह है कि आवश्यकता पड़ने पर एम्बुलेंस उपलब्ध हो और मरीज को समय पर स्थानांतरित किया जा सके। संपर्क नंबर और उपलब्धता की जानकारी स्पष्ट होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Ambulance Services Hospital', url: 'https://www.youtube.com/watch?v=AmbulanceNABH', description: 'Ambulance service requirements' },
+    ],
+  },
+  'COP.2.i': {
+    hindiExplanation: 'एम्बुलेंस उद्देश्य के अनुकूल होनी चाहिए, प्रशिक्षित कर्मियों द्वारा संचालित होनी चाहिए, उचित रूप से सुसज्जित होनी चाहिए, और एम्बुलेंस में आपातकालीन दवाइयां उपलब्ध होनी चाहिए। एम्बुलेंस में ऑक्सीजन, स्ट्रेचर, प्राथमिक चिकित्सा किट, suction apparatus, और आवश्यक दवाइयां होनी चाहिए। ड्राइवर और अटेंडेंट को BLS में प्रशिक्षित होना चाहिए।',
+    youtubeVideos: [
+      { title: 'Ambulance Equipment Standards', url: 'https://www.youtube.com/watch?v=AmbEquip', description: 'Required ambulance equipment' },
+    ],
+  },
+  'COP.2.j': {
+    hindiExplanation: 'आपातकालीन विभाग उपचार को जल्द से जल्द शुरू करने के अवसरों की पहचान करता है, जब मरीज संस्था में पहुंचने के रास्ते में हो। इसमें एम्बुलेंस से संपर्क, दूरस्थ निर्देश, और आगमन से पहले आवश्यक तैयारी शामिल है। उदाहरण के लिए, हृदयाघात के मरीज के लिए कार्डियोलॉजी टीम को पहले से सूचित करना। यह Excellence element है।',
+    youtubeVideos: [
+      { title: 'Pre-hospital Care', url: 'https://www.youtube.com/watch?v=PreHospital', description: 'Treatment initiation in transit' },
+    ],
+  },
+  'COP.2.k': {
+    hindiExplanation: 'संस्था संभावित सामुदायिक आपातकालीन स्थितियों, महामारियों और अन्य आपदाओं का प्रबंधन एक दस्तावेजित योजना के अनुसार करती है। इसमें आपदा प्रबंधन योजना (Disaster Management Plan), सामूहिक दुर्घटना प्रबंधन (Mass Casualty Management), महामारी प्रबंधन, और संसाधन जुटाव शामिल है। नियमित मॉक ड्रिल आयोजित की जानी चाहिए।',
+    youtubeVideos: [
+      { title: 'Hospital Disaster Management', url: 'https://www.youtube.com/watch?v=DisasterMgmt', description: 'Disaster and epidemic management' },
     ],
   },
 
-  // COP.3 - Nursing care
+  // COP.3 - Cardio-pulmonary resuscitation services are provided uniformly
   'COP.3.a': {
-    hindiExplanation: 'नर्सिंग का काम पढ़ी-लिखी नर्स को करना चाहिए। GNM या BSc Nursing पास नर्स होनी चाहिए।',
+    hindiExplanation: 'पुनर्जीवन सेवाएं (Resuscitation services) मरीजों को हर समय उपलब्ध होनी चाहिए। इसका अर्थ है कि 24x7 CPR-प्रशिक्षित स्टाफ और आवश्यक उपकरण उपलब्ध होने चाहिए। Code Blue प्रणाली लागू होनी चाहिए जिससे आपातकालीन स्थिति में तुरंत सहायता पहुंच सके। सभी नैदानिक क्षेत्रों में पुनर्जीवन तक पहुंच सुनिश्चित होनी चाहिए।',
     youtubeVideos: [
-      { title: 'Nursing Care Standards', url: 'https://www.youtube.com/watch?v=FIlTmKxRVPnE', description: 'Nursing care requirements' },
+      { title: 'Code Blue Protocol', url: 'https://www.youtube.com/watch?v=CodeBlue', description: 'Hospital resuscitation services' },
     ],
   },
   'COP.3.b': {
-    hindiExplanation: 'नर्स को मरीज की जांच करके उसकी देखभाल की योजना बनानी चाहिए। मरीज को क्या चाहिए, इसके हिसाब से काम करना चाहिए।',
+    hindiExplanation: 'कार्डियोपल्मोनरी पुनर्जीवन (CPR) के दौरान, निर्धारित भूमिकाओं और जिम्मेदारियों का पालन किया जाता है, और CPR के दौरान होने वाली घटनाओं का रिकॉर्ड रखा जाता है। CPR के दौरान टीम लीडर, एयरवे मैनेजर, कंप्रेशन देने वाला, दवाई देने वाला, और रिकॉर्ड करने वाला निर्धारित होना चाहिए। CPR शीट में समय, दवाइयां, शॉक, और परिणाम दर्ज होना चाहिए।',
     youtubeVideos: [
-      { title: 'Nursing Care Planning', url: 'https://www.youtube.com/watch?v=GIlTmKxRVPnE', description: 'Developing nursing care plan' },
+      { title: 'CPR Team Roles', url: 'https://www.youtube.com/watch?v=CPRTeam', description: 'CPR roles and documentation' },
+    ],
+  },
+  'COP.3.c': {
+    hindiExplanation: 'कार्डियोपल्मोनरी पुनर्जीवन के दौरान उपयोग के लिए उपकरण और दवाइयां संस्था के विभिन्न क्षेत्रों में उपलब्ध होनी चाहिए। Crash Cart/Code Blue Trolley में defibrillator, Ambu bag, laryngoscope, ET tubes, IV cannulas, और आपातकालीन दवाइयां (Adrenaline, Atropine, Amiodarone आदि) होनी चाहिए। इनकी नियमित जांच और रखरखाव होना चाहिए।',
+    youtubeVideos: [
+      { title: 'Crash Cart Contents', url: 'https://www.youtube.com/watch?v=CrashCart', description: 'CPR equipment and medications' },
+    ],
+  },
+  'COP.3.d': {
+    hindiExplanation: 'एक बहु-विषयक समिति (multidisciplinary committee) सभी कार्डियोपल्मोनरी पुनर्जीवनों का घटना-पश्चात विश्लेषण (post-event analysis) करती है, और इसके आधार पर सुधारात्मक और निवारक उपाय किए जाते हैं। इस समिति में चिकित्सक, नर्स, और गुणवत्ता विभाग के प्रतिनिधि शामिल होने चाहिए। विश्लेषण में प्रतिक्रिया समय, प्रोटोकॉल पालन, और परिणाम की समीक्षा होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'CPR Analysis Committee', url: 'https://www.youtube.com/watch?v=CPRAnalysis', description: 'Post-CPR event analysis' },
     ],
   },
 
-  // COP.4 - Anaesthesia
+  // COP.4 - Nursing care is provided to patients in consonance with clinical protocols
   'COP.4.a': {
-    hindiExplanation: 'बेहोशी की दवाई देने का काम सिर्फ पढ़े-लिखे एनेस्थेटिस्ट डॉक्टर को करना चाहिए। MD या DA पास डॉक्टर होना चाहिए।',
+    hindiExplanation: 'नर्सिंग देखभाल समग्र मरीज देखभाल के साथ संरेखित और एकीकृत होनी चाहिए, और मरीज के रिकॉर्ड में दस्तावेजित होनी चाहिए। इसमें नर्सिंग एसेसमेंट, नर्सिंग डायग्नोसिस, नर्सिंग केयर प्लान, इंटरवेंशन, और मूल्यांकन शामिल है। नर्सिंग नोट्स में मरीज की स्थिति, दी गई देखभाल, और प्रतिक्रिया का विस्तृत रिकॉर्ड होना चाहिए। यह CORE element है।',
     youtubeVideos: [
-      { title: 'Anaesthesia Services NABH', url: 'https://www.youtube.com/watch?v=HIlTmKxRVPnE', description: 'NABH anaesthesia requirements' },
+      { title: 'Nursing Documentation NABH', url: 'https://www.youtube.com/watch?v=NursingDoc', description: 'Nursing care documentation' },
+    ],
+  },
+  'COP.4.b': {
+    hindiExplanation: 'नर्सिंग स्टाफ द्वारा प्रदान की गई देखभाल में स्वास्थ्य संवर्धन, मरीज को स्व-देखभाल के बारे में जानकारी देना, रोग के प्रबंधन से संबंधित शिक्षा, और यथासंभव पुनर्वास शामिल है। नर्स मरीज और परिवार को दवाइयों के उपयोग, जीवनशैली में बदलाव, और फॉलो-अप के बारे में शिक्षित करती है। यह मरीज को स्वास्थ्य लाभ में सक्रिय भागीदार बनाता है।',
+    youtubeVideos: [
+      { title: 'Nurse Patient Education', url: 'https://www.youtube.com/watch?v=NurseEducation', description: 'Health promotion by nurses' },
     ],
   },
 
-  // COP.5 - Surgical care
+  // COP.5 - Transfusion services are provided as per the scope of services, safely
   'COP.5.a': {
-    hindiExplanation: 'ऑपरेशन सिर्फ पढ़े-लिखे सर्जन डॉक्टर को करना चाहिए। MS या MCh पास डॉक्टर होना चाहिए।',
+    hindiExplanation: 'ट्रांसफ्यूजन सेवाएं संस्था द्वारा प्रदान की जाने वाली सेवाओं के अनुरूप होनी चाहिए, और लागू कानूनों एवं विनियमों द्वारा शासित होनी चाहिए। यदि संस्था में ब्लड बैंक है तो Drugs and Cosmetics Act के तहत लाइसेंस आवश्यक है। यदि बाहरी ब्लड बैंक से रक्त लिया जाता है तो वह लाइसेंसधारी होना चाहिए। रक्त के भंडारण और परिवहन के मानक का पालन अनिवार्य है।',
     youtubeVideos: [
-      { title: 'Surgical Care Standards', url: 'https://www.youtube.com/watch?v=IIlTmKxRVPnE', description: 'Standards for surgical care' },
+      { title: 'Blood Bank Regulations', url: 'https://www.youtube.com/watch?v=BloodBankReg', description: 'Blood transfusion regulations' },
     ],
   },
   'COP.5.b': {
-    hindiExplanation: 'ऑपरेशन से पहले मरीज या परिवार से लिखित में हां लेनी चाहिए। उन्हें समझाना चाहिए कि ऑपरेशन क्या है और क्या खतरे हो सकते हैं।',
+    hindiExplanation: 'संस्था सुरक्षित ट्रांसफ्यूजन प्रथाओं का पालन करती है। इसमें रक्त समूह और क्रॉस-मैच की पुष्टि, ट्रांसफ्यूजन से पहले दो पहचानकर्ताओं से मरीज की पहचान, सहमति प्राप्त करना, ट्रांसफ्यूजन के दौरान निगरानी, और प्रतिकूल प्रतिक्रियाओं का प्रबंधन शामिल है। Bedside verification अनिवार्य है। ट्रांसफ्यूजन रिकॉर्ड दस्तावेजित होना चाहिए। यह CORE element है।',
     youtubeVideos: [
-      { title: 'Surgical Consent Process', url: 'https://www.youtube.com/watch?v=JIlTmKxRVPnE', description: 'Obtaining surgical consent' },
+      { title: 'Safe Transfusion Practice', url: 'https://www.youtube.com/watch?v=SafeTransfusion', description: 'Blood transfusion safety' },
+    ],
+  },
+  'COP.5.c': {
+    hindiExplanation: 'संस्था ट्रांसफ्यूजन प्रतिक्रियाओं (transfusion reactions) की निगरानी करती है, और उचित कार्रवाई की जाती है एवं दस्तावेजित की जाती है। ट्रांसफ्यूजन प्रतिक्रियाओं में बुखार, ठंड लगना, पित्ती, सांस लेने में कठिनाई, और गंभीर एलर्जी शामिल हैं। प्रतिक्रिया होने पर ट्रांसफ्यूजन रोकना, चिकित्सक को सूचित करना, और ब्लड बैंक को रिपोर्ट करना आवश्यक है।',
+    youtubeVideos: [
+      { title: 'Transfusion Reactions', url: 'https://www.youtube.com/watch?v=TransfusionReact', description: 'Managing transfusion reactions' },
+    ],
+  },
+  'COP.5.d': {
+    hindiExplanation: 'संस्था के पास रक्त घटकों के तर्कसंगत उपयोग और आवश्यकता-आधारित उपयोग के लिए मानदंड हैं। इसका अर्थ है कि whole blood की जगह आवश्यक घटक (packed RBCs, platelets, FFP) का उपयोग किया जाए। अनावश्यक ट्रांसफ्यूजन से बचना चाहिए। ट्रांसफ्यूजन ट्रिगर और थ्रेशोल्ड परिभाषित होने चाहिए। रक्त की बर्बादी को कम करने के प्रयास होने चाहिए।',
+    youtubeVideos: [
+      { title: 'Rational Blood Use', url: 'https://www.youtube.com/watch?v=RationalBlood', description: 'Appropriate blood component use' },
+    ],
+  },
+  'COP.5.e': {
+    hindiExplanation: 'संस्था विशेष परिस्थितियों जैसे विशाल रक्तस्राव (massive haemorrhage) को सुरक्षित रूप से प्रबंधित करती है और आपातकालीन अनक्रॉसमैच्ड रक्त जारी करने के लिए मानदंड हैं। Massive Transfusion Protocol (MTP) लिखित होना चाहिए। आपातकाल में O negative रक्त देने के नियम स्पष्ट होने चाहिए। इन स्थितियों में भी सुरक्षा प्रोटोकॉल का पालन आवश्यक है।',
+    youtubeVideos: [
+      { title: 'Massive Transfusion Protocol', url: 'https://www.youtube.com/watch?v=MassiveTransfusion', description: 'Managing massive hemorrhage' },
+    ],
+  },
+
+  // COP.6 - Organization provides care in the intensive care and high dependency units
+  'COP.6.a': {
+    hindiExplanation: 'गहन देखभाल इकाई (ICU) और उच्च निर्भरता इकाई (HDU) के लिए परिभाषित भर्ती और छुट्टी मानदंड लागू किए जाते हैं, और बिस्तर की कमी की स्थिति के लिए परिभाषित प्रक्रियाओं का पालन किया जाता है। ICU भर्ती मानदंड में हेमोडायनामिक अस्थिरता, श्वसन विफलता, और गंभीर संक्रमण शामिल हैं। जब ICU भरा हो तो मरीजों को अस्थायी रूप से कहां रखना है, इसकी स्पष्ट नीति होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'ICU Admission Criteria', url: 'https://www.youtube.com/watch?v=ICUAdmission', description: 'ICU admission and discharge criteria' },
+    ],
+  },
+  'COP.6.b': {
+    hindiExplanation: 'देखभाल मानक प्रोटोकॉल द्वारा निर्देशित होती है। ICU में वेंटिलेटर देखभाल, सेडेशन प्रोटोकॉल, sepsis प्रबंधन, DVT प्रोफिलैक्सिस, और nutrition प्रोटोकॉल होने चाहिए। ये साक्ष्य-आधारित होने चाहिए और नियमित रूप से अपडेट किए जाने चाहिए। प्रोटोकॉल का पालन सुनिश्चित करने के लिए ऑडिट होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'ICU Care Protocols', url: 'https://www.youtube.com/watch?v=ICUProtocols', description: 'Standard ICU care protocols' },
+    ],
+  },
+  'COP.6.c': {
+    hindiExplanation: 'संवेदनशील मामलों में मरीजों या परिवार के सदस्यों को सूचित निर्णय लेने में सहायता की जाती है। इसमें गंभीर बीमारी का पूर्वानुमान, उपचार विकल्प, जीवन समाप्ति देखभाल निर्णय, और अंग दान शामिल हैं। परिवार के साथ नियमित संवाद और काउंसलिंग प्रदान की जानी चाहिए। संवेदनशील विषयों पर चर्चा के लिए उचित वातावरण होना चाहिए।',
+    youtubeVideos: [
+      { title: 'ICU Family Communication', url: 'https://www.youtube.com/watch?v=ICUFamily', description: 'Sensitive case communication' },
+    ],
+  },
+  'COP.6.d': {
+    hindiExplanation: 'संस्था विशेष श्रेणियों (बाल चिकित्सा, नवजात शिशु) के रोगियों की देखभाल के लिए मानदंडों को पूरा करती है। PICU और NICU के लिए विशेष मानक हैं जिनमें उम्र-उपयुक्त उपकरण, दवाई की खुराक गणना, और विशेष प्रशिक्षित स्टाफ शामिल है। माता-पिता की उपस्थिति और बंधन (bonding) की सुविधा होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'PICU NICU Standards', url: 'https://www.youtube.com/watch?v=PediatricICU', description: 'Pediatric and neonatal ICU care' },
+    ],
+  },
+
+  // COP.7 - Organization provides safe obstetric care
+  'COP.7.a': {
+    hindiExplanation: 'प्रसूति सेवाएं सुरक्षित रूप से आयोजित और प्रदान की जाती हैं। इसमें प्रसवपूर्व देखभाल, प्रसव, और प्रसवोत्तर देखभाल शामिल है। उच्च जोखिम गर्भावस्था की पहचान और प्रबंधन के लिए प्रोटोकॉल होने चाहिए। आपातकालीन प्रसूति स्थितियों (eclampsia, PPH, cord prolapse) के लिए तैयारी होनी चाहिए। LSCS के लिए सुविधाएं उपलब्ध होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Safe Obstetric Care', url: 'https://www.youtube.com/watch?v=ObstetricCare', description: 'Safe delivery services' },
+    ],
+  },
+  'COP.7.b': {
+    hindiExplanation: 'प्रसव के दौरान मां और भ्रूण दोनों की निगरानी की जाती है, और परिणामों को दस्तावेजित किया जाता है। Partograph का उपयोग अनिवार्य है। भ्रूण की हृदय गति की नियमित निगरानी होनी चाहिए। मां की vital signs, गर्भाशय संकुचन, और प्रसव की प्रगति दर्ज होनी चाहिए। असामान्य पैटर्न पर तुरंत कार्रवाई होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Labour Monitoring', url: 'https://www.youtube.com/watch?v=LabourMonitor', description: 'Maternal and fetal monitoring' },
+    ],
+  },
+  'COP.7.c': {
+    hindiExplanation: 'जन्म के तुरंत बाद नवजात शिशु की उचित देखभाल सुनिश्चित की जाती है। इसमें APGAR स्कोर, त्वचा से त्वचा संपर्क, स्तनपान की शुरुआत, आंखों की देखभाल, विटामिन K इंजेक्शन, और हेपेटाइटिस B टीकाकरण शामिल है। जन्म के बाद मां और नवजात को एक साथ रखना (rooming-in) प्रोत्साहित किया जाना चाहिए।',
+    youtubeVideos: [
+      { title: 'Essential Newborn Care', url: 'https://www.youtube.com/watch?v=NewbornCare', description: 'Immediate newborn care' },
+    ],
+  },
+  'COP.7.d': {
+    hindiExplanation: 'संस्था ने जन्म के समय बच्चे का वजन, स्तनपान, टीकाकरण इत्यादि के संबंध में राष्ट्रीय स्वास्थ्य कार्यक्रमों को लागू किया है। इसमें Janani Suraksha Yojana, Pradhan Mantri Matru Vandana Yojana, और Universal Immunization Programme शामिल हैं। जन्म पंजीकरण 21 दिनों के भीतर होना चाहिए। PCPNDT Act के तहत प्रसवपूर्व निदान प्रतिबंधित है।',
+    youtubeVideos: [
+      { title: 'National Health Programs Maternity', url: 'https://www.youtube.com/watch?v=NationalPrograms', description: 'Government health program compliance' },
+    ],
+  },
+
+  // COP.8 - Organization provides care to patients undergoing dialysis
+  'COP.8.a': {
+    hindiExplanation: 'यदि लागू हो तो संस्था में डायलिसिस सेवाएं नेफ्रोलॉजिस्ट या प्रशिक्षित चिकित्सक की देखरेख में प्रदान की जाती हैं। डायलिसिस तकनीशियन प्रशिक्षित और प्रमाणित होने चाहिए। डायलिसिस मशीनों का नियमित रखरखाव और कैलिब्रेशन होना चाहिए। जल शुद्धता के मानक (RO + DI water) का पालन अनिवार्य है।',
+    youtubeVideos: [
+      { title: 'Dialysis Unit Standards', url: 'https://www.youtube.com/watch?v=DialysisStandards', description: 'Safe dialysis services' },
+    ],
+  },
+  'COP.8.b': {
+    hindiExplanation: 'मरीजों का मूल्यांकन और पुनर्मूल्यांकन के बाद उनकी देखभाल की योजना बनाई जाती है, और देखभाल का दस्तावेजीकरण किया जाता है। डायलिसिस से पहले vital signs, वजन, और edema की जांच होनी चाहिए। डायलिसिस के दौरान निगरानी और इंट्रा-डायलिटिक जटिलताओं का प्रबंधन दस्तावेजित होना चाहिए।',
+    youtubeVideos: [
+      { title: 'Dialysis Care Documentation', url: 'https://www.youtube.com/watch?v=DialysisDoc', description: 'Dialysis patient care planning' },
+    ],
+  },
+  'COP.8.c': {
+    hindiExplanation: 'डायलिसिस संबंधी संक्रमण नियंत्रण प्रथाओं का पालन किया जाता है। इसमें वास्कुलर एक्सेस साइट की देखभाल, मशीनों का कीटाणुशोधन, HBsAg और HCV पॉजिटिव मरीजों के लिए अलग मशीनें, और हाथ स्वच्छता शामिल है। डायलिसिस यूनिट में संक्रमण दर की निगरानी होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Dialysis Infection Control', url: 'https://www.youtube.com/watch?v=DialysisInfection', description: 'Infection control in dialysis' },
+    ],
+  },
+
+  // COP.9 - Organization provides procedural sedation for patients
+  'COP.9.a': {
+    hindiExplanation: 'यदि लागू हो तो प्रक्रियात्मक बेहोशी (procedural sedation) योग्य कर्मियों द्वारा प्रदान की जाती है। प्रक्रियात्मक बेहोशी का अर्थ है छोटी प्रक्रियाओं (endoscopy, biopsies, wound dressing) के दौरान दी जाने वाली बेहोशी। यह प्रशिक्षित चिकित्सक द्वारा दी जानी चाहिए जो आपातकालीन स्थितियों को संभाल सके।',
+    youtubeVideos: [
+      { title: 'Procedural Sedation', url: 'https://www.youtube.com/watch?v=ProceduralSedation', description: 'Safe procedural sedation' },
+    ],
+  },
+  'COP.9.b': {
+    hindiExplanation: 'प्रक्रिया से पहले प्री-सेडेशन मूल्यांकन किया जाता है और दस्तावेजित किया जाता है। इसमें उपवास स्थिति, एलर्जी इतिहास, पिछली बेहोशी का अनुभव, वायुमार्ग मूल्यांकन, और ASA ग्रेडिंग शामिल है। सहमति प्राप्त करना और जोखिमों के बारे में सूचित करना अनिवार्य है। आवश्यक जांचें पूर्ण होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Pre-sedation Assessment', url: 'https://www.youtube.com/watch?v=PreSedation', description: 'Pre-sedation evaluation' },
+    ],
+  },
+  'COP.9.c': {
+    hindiExplanation: 'बेहोशी के दौरान निगरानी होती है और आपातकालीन दवाइयां उपलब्ध होती हैं। निगरानी में oxygen saturation, heart rate, blood pressure, और respiratory rate शामिल है। Reversal agents (Flumazenil, Naloxone) और resuscitation उपकरण तुरंत उपलब्ध होने चाहिए। बेहोशी की गहराई का नियमित मूल्यांकन होना चाहिए।',
+    youtubeVideos: [
+      { title: 'Sedation Monitoring', url: 'https://www.youtube.com/watch?v=SedationMonitor', description: 'Monitoring during sedation' },
+    ],
+  },
+  'COP.9.d': {
+    hindiExplanation: 'संस्था के पास पोस्ट-सेडेशन रिकवरी के लिए मानदंड हैं। डिस्चार्ज से पहले मरीज को परिभाषित मानदंडों (Aldrete Score) को पूरा करना होगा। मरीज पूरी तरह से जागा हुआ, orientated, और hemodynamically stable होना चाहिए। घर जाने के लिए जिम्मेदार वयस्क का होना आवश्यक है। पोस्ट-प्रोसीजर निर्देश दिए जाने चाहिए।',
+    youtubeVideos: [
+      { title: 'Post-sedation Recovery', url: 'https://www.youtube.com/watch?v=PostSedation', description: 'Sedation recovery criteria' },
+    ],
+  },
+  'COP.9.e': {
+    hindiExplanation: 'प्रक्रियात्मक बेहोशी का दस्तावेजीकरण मरीज के रिकॉर्ड में किया जाता है। इसमें दी गई दवाइयां, खुराक, समय, मरीज की प्रतिक्रिया, जटिलताएं (यदि कोई हों), और रिकवरी का विवरण शामिल होना चाहिए। यह दस्तावेजीकरण चिकित्सा-कानूनी उद्देश्यों के लिए भी महत्वपूर्ण है।',
+    youtubeVideos: [
+      { title: 'Sedation Documentation', url: 'https://www.youtube.com/watch?v=SedationDoc', description: 'Documenting procedural sedation' },
+    ],
+  },
+
+  // COP.10 - Organization provides safe anaesthesia services
+  'COP.10.a': {
+    hindiExplanation: 'यदि लागू हो तो एनेस्थीसिया सेवाएं योग्य एनेस्थीसिया कर्मियों द्वारा प्रदान की जाती हैं। एनेस्थीसिया देने का काम MD/DA/DNB Anaesthesia योग्य डॉक्टर को करना चाहिए। एनेस्थीसिया तकनीशियन प्रशिक्षित और पर्यवेक्षित होने चाहिए। एनेस्थेटिस्ट की उपलब्धता 24x7 सुनिश्चित होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Anaesthesia Personnel', url: 'https://www.youtube.com/watch?v=AnaesthesiaStaff', description: 'Qualified anaesthesia staff' },
+    ],
+  },
+  'COP.10.b': {
+    hindiExplanation: 'प्री-एनेस्थेटिक मूल्यांकन किया जाता है और इसे मरीज के रिकॉर्ड में दस्तावेजित किया जाता है। इसमें चिकित्सा इतिहास, पिछली एनेस्थीसिया का अनुभव, एलर्जी, वर्तमान दवाइयां, उपवास स्थिति, वायुमार्ग मूल्यांकन, और ASA ग्रेडिंग शामिल है। एनेस्थीसिया योजना और जोखिम मरीज को समझाए जाने चाहिए। यह CORE element है।',
+    youtubeVideos: [
+      { title: 'Pre-anaesthetic Assessment', url: 'https://www.youtube.com/watch?v=PreAnaesthesia', description: 'Pre-anaesthetic evaluation' },
+    ],
+  },
+  'COP.10.c': {
+    hindiExplanation: 'सूचित सहमति प्राप्त की जाती है जिसमें एनेस्थीसिया के लाभ, जोखिम, और विकल्प शामिल होते हैं। मरीज या कानूनी अभिभावक को एनेस्थीसिया के प्रकार, संभावित जटिलताओं, और वैकल्पिक विकल्पों के बारे में सूचित करना चाहिए। सहमति लिखित होनी चाहिए और मरीज के रिकॉर्ड में संलग्न होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Anaesthesia Consent', url: 'https://www.youtube.com/watch?v=AnaesthesiaConsent', description: 'Informed consent for anaesthesia' },
+    ],
+  },
+  'COP.10.d': {
+    hindiExplanation: 'ऑपरेटिंग कमरे में एनेस्थीसिया उपकरण और दवाइयां उपलब्ध हैं, और एनेस्थीसिया तकनीशियन उन्हें संचालित करने में सक्षम हैं। एनेस्थीसिया मशीन, मॉनिटर, defibrillator, suction, और आपातकालीन दवाइयां (muscle relaxants, reversal agents, vasopressors) तुरंत उपलब्ध होनी चाहिए। उपकरणों की दैनिक जांच होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'OT Anaesthesia Equipment', url: 'https://www.youtube.com/watch?v=OTEquipment', description: 'Anaesthesia equipment in OT' },
+    ],
+  },
+  'COP.10.e': {
+    hindiExplanation: 'एनेस्थीसिया के तहत मरीज की निगरानी की जाती है और निगरानी के परिणाम दस्तावेजित किए जाते हैं। निरंतर निगरानी में ECG, SpO2, ETCO2, blood pressure, और temperature शामिल हैं। एनेस्थीसिया रिकॉर्ड में दवाइयां, vital signs, fluids, और घटनाओं का समय-आधारित रिकॉर्ड होना चाहिए। यह CORE element है।',
+    youtubeVideos: [
+      { title: 'Intraoperative Monitoring', url: 'https://www.youtube.com/watch?v=IntraopMonitor', description: 'Monitoring under anaesthesia' },
+    ],
+  },
+  'COP.10.f': {
+    hindiExplanation: 'पोस्ट-एनेस्थीसिया देखभाल प्रदान की जाती है, और डिस्चार्ज मानदंडों को पूरा किया जाता है। PACU (Post Anaesthesia Care Unit) या रिकवरी रूम में मरीज की निगरानी होनी चाहिए। Modified Aldrete Score या समान मानदंडों के आधार पर डिस्चार्ज का निर्णय लिया जाना चाहिए। पोस्ट-ऑपरेटिव दर्द प्रबंधन सुनिश्चित होना चाहिए।',
+    youtubeVideos: [
+      { title: 'PACU Care', url: 'https://www.youtube.com/watch?v=PACUCare', description: 'Post-anaesthesia care unit' },
+    ],
+  },
+  'COP.10.g': {
+    hindiExplanation: 'एनेस्थीसिया के दौरान प्रतिकूल घटनाओं (adverse events) की निगरानी की जाती है और रिपोर्ट की जाती है। इसमें एनेस्थीसिया संबंधी जटिलताएं जैसे malignant hyperthermia, anaphylaxis, aspiration, और awareness under anaesthesia शामिल हैं। ये घटनाएं दस्तावेजित होनी चाहिए और गुणवत्ता सुधार के लिए विश्लेषण किया जाना चाहिए।',
+    youtubeVideos: [
+      { title: 'Anaesthesia Adverse Events', url: 'https://www.youtube.com/watch?v=AnaesthesiaEvents', description: 'Adverse event monitoring' },
+    ],
+  },
+  'COP.10.h': {
+    hindiExplanation: 'ऑपरेटिंग रूम एक सुरक्षित वातावरण बनाए रखता है। इसमें आग सुरक्षा, electrical safety, zone concept, और environmental control (temperature, humidity, air changes) शामिल है। OT में restricted और semi-restricted zones होनी चाहिए। Traffic control और dress code का पालन अनिवार्य है।',
+    youtubeVideos: [
+      { title: 'OT Safety Environment', url: 'https://www.youtube.com/watch?v=OTSafety', description: 'Safe OT environment' },
+    ],
+  },
+
+  // COP.11 - Organization performs clinical procedures safely
+  'COP.11.a': {
+    hindiExplanation: 'नैदानिक प्रक्रियाएं (clinical procedures) योग्य कर्मियों द्वारा की जाती हैं और दस्तावेजित की जाती हैं। इसमें मामूली प्रक्रियाएं (wound suturing, catheterization) और बड़ी सर्जरी दोनों शामिल हैं। प्रत्येक प्रक्रिया के लिए कौन अधिकृत है, यह परिभाषित होना चाहिए। प्रक्रिया नोट में indication, technique, और findings दर्ज होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Clinical Procedures Documentation', url: 'https://www.youtube.com/watch?v=ClinicalProc', description: 'Documenting clinical procedures' },
+    ],
+  },
+  'COP.11.b': {
+    hindiExplanation: 'प्रक्रियाओं के लिए सूचित सहमति प्राप्त की जाती है, और मरीज या परिवार/अभिभावक द्वारा हस्ताक्षरित होती है। सहमति में प्रक्रिया का नाम, लाभ, जोखिम, विकल्प, और जटिलताओं की संभावना शामिल होनी चाहिए। यह प्रक्रिया करने वाले डॉक्टर द्वारा समझाई जानी चाहिए। बाल रोगियों और मानसिक रूप से अक्षम रोगियों के लिए अभिभावक से सहमति लेनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Procedure Consent', url: 'https://www.youtube.com/watch?v=ProcedureConsent', description: 'Informed consent for procedures' },
+    ],
+  },
+  'COP.11.c': {
+    hindiExplanation: 'प्रक्रियाओं से संबंधित जानकारी मरीज के रिकॉर्ड में दर्ज की जाती है। इसमें pre-procedure diagnosis, procedure name, surgeon/operator name, anaesthesia type, findings, specimens sent, और post-procedure plan शामिल है। ऑपरेटिव नोट सर्जरी के दिन ही लिखा जाना चाहिए।',
+    youtubeVideos: [
+      { title: 'Operative Notes', url: 'https://www.youtube.com/watch?v=OperativeNotes', description: 'Documentation of procedures' },
+    ],
+  },
+  'COP.11.d': {
+    hindiExplanation: 'संस्था ने गलत स्थान, गलत मरीज और गलत सर्जरी को रोकने के लिए एक प्रणाली अपनाई है। इसमें WHO Surgical Safety Checklist, साइट मार्किंग, और Time Out प्रक्रिया शामिल है। Time Out में मरीज की पहचान, प्रक्रिया, और साइट की पुष्टि पूरी टीम द्वारा की जाती है। यह CORE element है और मरीज सुरक्षा के लिए अत्यंत महत्वपूर्ण है।',
+    youtubeVideos: [
+      { title: 'Surgical Safety Checklist', url: 'https://www.youtube.com/watch?v=SurgicalChecklist', description: 'WHO surgical safety checklist' },
+    ],
+  },
+  'COP.11.e': {
+    hindiExplanation: 'इम्प्लांट का उपयोग नियामक आवश्यकताओं के अनुसार किया जाता है, और उनका दस्तावेजीकरण किया जाता है। इम्प्लांट पर बैच नंबर, एक्सपायरी, और manufacturer का विवरण दर्ज होना चाहिए। मरीज को इम्प्लांट कार्ड दिया जाना चाहिए। ट्रेसेबिलिटी सुनिश्चित करने के लिए इम्प्लांट रजिस्टर बनाए रखना चाहिए।',
+    youtubeVideos: [
+      { title: 'Implant Documentation', url: 'https://www.youtube.com/watch?v=ImplantDoc', description: 'Implant usage documentation' },
+    ],
+  },
+  'COP.11.f': {
+    hindiExplanation: 'प्रक्रिया के बाद जटिलताओं के लिए निगरानी की जाती है, और उचित देखभाल प्रदान की जाती है। पोस्ट-ऑपरेटिव निगरानी में vital signs, wound site, drain output, और pain assessment शामिल है। जटिलताओं जैसे bleeding, infection, या organ dysfunction का शीघ्र पता लगाना और प्रबंधन होना चाहिए।',
+    youtubeVideos: [
+      { title: 'Post-operative Care', url: 'https://www.youtube.com/watch?v=PostOpCare', description: 'Post-procedure monitoring' },
+    ],
+  },
+  'COP.11.g': {
+    hindiExplanation: 'ऑपरेटिंग रूम में सुरक्षा प्रणालियां बनाए रखी जाती हैं। इसमें electrosurgical safety, laser safety, radiation safety, और specimen handling शामिल है। OT में आग बुझाने के उपकरण और आपातकालीन निकास होना चाहिए। सभी OT स्टाफ को सुरक्षा प्रोटोकॉल का प्रशिक्षण होना चाहिए।',
+    youtubeVideos: [
+      { title: 'OT Safety Systems', url: 'https://www.youtube.com/watch?v=OTSafetySystems', description: 'Safety systems in operating room' },
+    ],
+  },
+  'COP.11.h': {
+    hindiExplanation: 'ऑपरेटिंग थिएटर में संक्रमण नियंत्रण प्रथाओं का पालन किया जाता है। इसमें surgical scrub, sterile gowning and gloving, aseptic technique, OT fumigation, और surgical site infection prevention bundle शामिल है। Surgical Site Infection दर की निगरानी और विश्लेषण होना चाहिए।',
+    youtubeVideos: [
+      { title: 'OT Infection Control', url: 'https://www.youtube.com/watch?v=OTInfectionControl', description: 'Infection control in OT' },
+    ],
+  },
+  'COP.11.i': {
+    hindiExplanation: 'यदि लागू हो तो संस्था ने अंग प्रत्यारोपण (organ transplant) के संबंध में कानूनी आवश्यकताओं का अनुपालन किया है। Transplantation of Human Organs and Tissues Act, 1994 के तहत अधिकृत होना आवश्यक है। प्रत्यारोपण समिति का गठन, donor evaluation, और documentation आवश्यकताओं का पालन अनिवार्य है। यह CORE element है।',
+    youtubeVideos: [
+      { title: 'Organ Transplant Regulations', url: 'https://www.youtube.com/watch?v=TransplantReg', description: 'Transplant legal requirements' },
+    ],
+  },
+  'COP.11.j': {
+    hindiExplanation: 'संस्था अंग दान (organ donation) और प्रत्यारोपण के बारे में जागरूकता पैदा करती है। इसमें मरीजों और परिवारों को अंग दान के महत्व के बारे में शिक्षित करना, organ donation forms उपलब्ध कराना, और brain death protocol लागू करना शामिल है। Transplant coordinator की नियुक्ति की जानी चाहिए। यह CORE element है।',
+    youtubeVideos: [
+      { title: 'Organ Donation Awareness', url: 'https://www.youtube.com/watch?v=OrganDonation', description: 'Promoting organ donation' },
+    ],
+  },
+  'COP.11.k': {
+    hindiExplanation: 'पोस्ट-ऑपरेटिव देखभाल की निगरानी और दस्तावेजीकरण किया जाता है। इसमें post-operative orders, nursing care, pain management, और discharge planning शामिल है। सर्जन द्वारा दैनिक rounds और progress notes लिखी जानी चाहिए। रिकवरी की प्रगति और किसी भी जटिलता का दस्तावेजीकरण होना चाहिए।',
+    youtubeVideos: [
+      { title: 'Post-op Care Documentation', url: 'https://www.youtube.com/watch?v=PostOpDoc', description: 'Documenting post-operative care' },
+    ],
+  },
+
+  // COP.12 - Special needs of patients are provided for
+  'COP.12.a': {
+    hindiExplanation: 'संस्था ने जोखिम वाले मरीजों की पहचान के लिए नीतियां और प्रक्रियाएं बनाई हैं। इसमें बुजुर्ग, बच्चे, विकलांग, मानसिक रूप से बीमार, और कमजोर समूहों के मरीज शामिल हैं। जोखिम मूल्यांकन उपकरणों का उपयोग करके इन मरीजों की पहचान की जानी चाहिए और उनकी विशेष देखभाल सुनिश्चित की जानी चाहिए।',
+    youtubeVideos: [
+      { title: 'Vulnerable Patient Identification', url: 'https://www.youtube.com/watch?v=VulnerablePatients', description: 'Identifying at-risk patients' },
+    ],
+  },
+  'COP.12.b': {
+    hindiExplanation: 'जोखिम वाले मरीजों के लिए आवश्यक देखभाल प्रदान करने के लिए कर्मचारी प्रशिक्षित होते हैं। इसमें elderly care, pediatric care, disability-sensitive care, और mental health care का प्रशिक्षण शामिल है। कर्मचारियों को विशेष जरूरतों वाले मरीजों के साथ संवेदनशील व्यवहार का प्रशिक्षण मिलना चाहिए।',
+    youtubeVideos: [
+      { title: 'Vulnerable Patient Training', url: 'https://www.youtube.com/watch?v=VulnerableTraining', description: 'Staff training for at-risk patients' },
+    ],
+  },
+  'COP.12.c': {
+    hindiExplanation: 'संस्था गिरने के जोखिम वाले मरीजों की पहचान करती है और उनकी सुरक्षा के लिए उपाय करती है। Fall Risk Assessment Tool का उपयोग करके जोखिम का मूल्यांकन होना चाहिए। उच्च जोखिम वाले मरीजों के लिए side rails, non-slip footwear, और close supervision जैसी सावधानियां लागू होनी चाहिए। गिरने की घटनाओं का विश्लेषण होना चाहिए। यह CORE element है।',
+    youtubeVideos: [
+      { title: 'Fall Prevention', url: 'https://www.youtube.com/watch?v=FallPrevention', description: 'Fall risk assessment and prevention' },
+    ],
+  },
+  'COP.12.d': {
+    hindiExplanation: 'संस्था दबाव अल्सर (pressure ulcer/bedsore) के जोखिम वाले मरीजों की पहचान करती है और निवारक उपाय करती है। Braden Scale या समान उपकरण का उपयोग करके जोखिम का मूल्यांकन होना चाहिए। Position change schedule, pressure-relieving devices, skin care, और nutrition support जैसी रोकथाम रणनीतियां लागू होनी चाहिए। यह CORE element है।',
+    youtubeVideos: [
+      { title: 'Pressure Ulcer Prevention', url: 'https://www.youtube.com/watch?v=PressureUlcer', description: 'Bedsore prevention strategies' },
+    ],
+  },
+  'COP.12.e': {
+    hindiExplanation: 'संस्था गहरी शिरा घनास्त्रता (DVT - Deep Vein Thrombosis) के जोखिम वाले मरीजों की पहचान करती है और निवारक उपाय करती है। DVT Risk Assessment (Caprini Score या समान) किया जाना चाहिए। जोखिम के आधार पर pharmacological prophylaxis (anticoagulants) और mechanical prophylaxis (compression stockings, SCDs) लागू होनी चाहिए। यह CORE element है।',
+    youtubeVideos: [
+      { title: 'DVT Prophylaxis', url: 'https://www.youtube.com/watch?v=DVTProphylaxis', description: 'DVT risk and prevention' },
+    ],
+  },
+
+  // COP.13 - Organization addresses pain, rehabilitation and nutritional care needs
+  'COP.13.a': {
+    hindiExplanation: 'मरीज को दर्द से राहत पाने का अधिकार है, और दर्द का मूल्यांकन तथा प्रबंधन किया जाता है। दर्द का मूल्यांकन करने के लिए दर्द स्केल (Numeric Rating Scale, Wong-Baker Faces Scale) का उपयोग होना चाहिए। दर्द को vital sign के रूप में दर्ज किया जाना चाहिए। दर्द प्रबंधन प्रोटोकॉल उपलब्ध होने चाहिए और multimodal analgesia का उपयोग किया जाना चाहिए।',
+    youtubeVideos: [
+      { title: 'Pain Assessment Management', url: 'https://www.youtube.com/watch?v=PainManagement', description: 'Pain as fifth vital sign' },
+    ],
+  },
+  'COP.13.b': {
+    hindiExplanation: 'मरीज की पुनर्वास आवश्यकताओं का मूल्यांकन और पुनर्वास सेवाएं प्रदान की जाती हैं। इसमें physiotherapy, occupational therapy, speech therapy, और cardiac rehabilitation शामिल है। पुनर्वास लक्ष्य मरीज की स्थिति और कार्यात्मक क्षमता के आधार पर निर्धारित होने चाहिए। पुनर्वास की प्रगति का दस्तावेजीकरण होना चाहिए।',
+    youtubeVideos: [
+      { title: 'Rehabilitation Services', url: 'https://www.youtube.com/watch?v=Rehabilitation', description: 'Patient rehabilitation needs' },
+    ],
+  },
+  'COP.13.c': {
+    hindiExplanation: 'मरीज की पोषण संबंधी आवश्यकताओं का मूल्यांकन किया जाता है और उपयुक्त आहार प्रदान किया जाता है। Nutritional Risk Screening (NRS-2002 या समान) किया जाना चाहिए। Dietitian द्वारा पोषण मूल्यांकन और विशेष आहार निर्धारित होना चाहिए। मधुमेह, गुर्दे की बीमारी, और अन्य स्थितियों के लिए therapeutic diet उपलब्ध होनी चाहिए।',
+    youtubeVideos: [
+      { title: 'Nutritional Care Hospital', url: 'https://www.youtube.com/watch?v=NutritionalCare', description: 'Nutrition assessment and diet' },
     ],
   },
 

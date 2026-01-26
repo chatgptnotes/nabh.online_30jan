@@ -84,6 +84,11 @@ export default function ObjectiveDetailPage() {
   const [isGeneratingSOP, setIsGeneratingSOP] = useState(false);
   const [generatedSOPContent, setGeneratedSOPContent] = useState('');
 
+  // State for AI Evidence Generator
+  const [isGeneratingEvidence, setIsGeneratingEvidence] = useState(false);
+  const [generatedEvidenceList, setGeneratedEvidenceList] = useState<string[]>([]);
+  const [isGeneratingHindi, setIsGeneratingHindi] = useState(false);
+
   // Find chapter and objective
   const chapter = chapters.find((c) => c.id === chapterId);
   const objective = chapter?.objectives.find((o) => o.id === objectiveId);
@@ -320,6 +325,140 @@ Format it professionally with clear sections and bullet points.`,
     return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : '';
   };
 
+  // Generate AI Evidence List based on interpretation
+  const handleGenerateEvidenceList = async () => {
+    setIsGeneratingEvidence(true);
+    setGeneratedEvidenceList([]);
+
+    try {
+      const apiKey = await getClaudeApiKey();
+      if (!apiKey) {
+        throw new Error('API key not configured');
+      }
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2048,
+          messages: [
+            {
+              role: 'user',
+              content: `For the following NABH accreditation objective element, generate a prioritized list of exactly 10 evidences that would be required to demonstrate compliance. List them in order of importance (most important first).
+
+Objective Code: ${objective.code}
+Interpretation: ${objective.description}
+Category: ${objective.category}
+${objective.isCore ? 'This is a CORE element which is mandatorily assessed.' : ''}
+
+Format your response as a numbered list (1-10) with each evidence item on a new line. Be specific about the type of document, record, or proof needed. Start directly with the list, no introduction.`,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate evidence list');
+      }
+
+      const data = await response.json();
+      const content = data.content[0]?.text || '';
+
+      // Parse the numbered list
+      const evidenceItems = content
+        .split('\n')
+        .filter((line: string) => line.trim().match(/^\d+\.\s/))
+        .map((line: string) => line.trim().replace(/^\d+\.\s*/, ''))
+        .slice(0, 10);
+
+      setGeneratedEvidenceList(evidenceItems);
+
+      // Auto-populate the evidencesList field
+      if (evidenceItems.length > 0) {
+        const formattedList = evidenceItems.map((item: string, idx: number) => `${idx + 1}. ${item}`).join('\n');
+        handleFieldChange('evidencesList', formattedList);
+      }
+    } catch (error) {
+      console.error('Error generating evidence list:', error);
+      setGeneratedEvidenceList(['Error generating evidence list. Please check your API key configuration.']);
+    } finally {
+      setIsGeneratingEvidence(false);
+    }
+  };
+
+  // Generate Hindi explanation based on interpretation
+  const handleGenerateHindiExplanation = async (interpretation: string) => {
+    if (!interpretation.trim()) return;
+
+    setIsGeneratingHindi(true);
+
+    try {
+      const apiKey = await getClaudeApiKey();
+      if (!apiKey) {
+        throw new Error('API key not configured');
+      }
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          messages: [
+            {
+              role: 'user',
+              content: `Translate and explain the following NABH accreditation standard interpretation into Hindi. The explanation should be detailed and accurate. You may use complex sentences if necessary, but the meaning must not be changed. This is for hospital staff training purposes.
+
+Objective Code: ${objective.code}
+English Interpretation: ${interpretation}
+${objective.isCore ? 'Note: This is a CORE element which is critical for patient safety.' : ''}
+
+Provide only the Hindi explanation, no English text. The explanation should be comprehensive and explain what the hospital needs to do to comply with this standard.`,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate Hindi explanation');
+      }
+
+      const data = await response.json();
+      const hindiContent = data.content[0]?.text || '';
+
+      if (hindiContent.trim()) {
+        updateObjective(chapter.id, objective.id, { hindiExplanation: hindiContent.trim() });
+      }
+    } catch (error) {
+      console.error('Error generating Hindi explanation:', error);
+    } finally {
+      setIsGeneratingHindi(false);
+    }
+  };
+
+  // Handle interpretation change with debounced Hindi generation
+  const handleInterpretationChange = (newInterpretation: string) => {
+    handleFieldChange('description', newInterpretation);
+  };
+
+  // Handle interpretation save (blur event) to trigger Hindi generation
+  const handleInterpretationBlur = async () => {
+    if (objective.description && objective.description.trim()) {
+      await handleGenerateHindiExplanation(objective.description);
+    }
+  };
+
   const evidenceFiles = objective.evidenceFiles || [];
 
   const handleBack = () => {
@@ -398,16 +537,28 @@ Format it professionally with clear sections and bullet points.`,
           />
 
           {/* Interpretation (formerly Description) */}
-          <TextField
-            fullWidth
-            label="Interpretation"
-            value={objective.description}
-            onChange={(e) => handleFieldChange('description', e.target.value)}
-            multiline
-            minRows={3}
-            size="small"
-            sx={expandableTextFieldSx}
-          />
+          <Box>
+            <TextField
+              fullWidth
+              label="Interpretation"
+              value={objective.description}
+              onChange={(e) => handleInterpretationChange(e.target.value)}
+              onBlur={handleInterpretationBlur}
+              multiline
+              minRows={3}
+              size="small"
+              sx={expandableTextFieldSx}
+              helperText="Hindi explanation will be auto-generated when you finish editing"
+            />
+            {isGeneratingHindi && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                <CircularProgress size={16} />
+                <Typography variant="caption" color="text.secondary">
+                  Generating Hindi explanation...
+                </Typography>
+              </Box>
+            )}
+          </Box>
 
           {/* Hindi Explanation Section */}
           {objective.hindiExplanation && (
@@ -516,9 +667,56 @@ Format it professionally with clear sections and bullet points.`,
 
           <Divider />
 
+          {/* AI Evidence Generator Section */}
+          <Accordion defaultExpanded sx={{ bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+            <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon color="primary">auto_awesome</Icon>
+                <Typography fontWeight={600}>AI Evidence Generator</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="info" icon={<Icon>lightbulb</Icon>} sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Generate a prioritized list of up to 10 evidences specific to this objective element.
+                  The list will be sorted by importance (most critical first).
+                </Typography>
+              </Alert>
+              <Button
+                variant="contained"
+                startIcon={isGeneratingEvidence ? <CircularProgress size={20} color="inherit" /> : <Icon>auto_awesome</Icon>}
+                onClick={handleGenerateEvidenceList}
+                disabled={isGeneratingEvidence || !objective.description}
+                sx={{ mb: 2 }}
+              >
+                {isGeneratingEvidence ? 'Generating Evidence List...' : 'Generate Evidence List with AI'}
+              </Button>
+              {generatedEvidenceList.length > 0 && (
+                <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Icon color="success" fontSize="small">check_circle</Icon>
+                    Generated Evidence List (Priority Order):
+                  </Typography>
+                  <Box component="ol" sx={{ m: 0, pl: 3 }}>
+                    {generatedEvidenceList.map((evidence, idx) => (
+                      <Box component="li" key={idx} sx={{ mb: 1 }}>
+                        <Typography variant="body2">
+                          {idx < 3 && <Chip label={idx === 0 ? 'P0' : idx === 1 ? 'P1' : 'P2'} size="small" color={idx === 0 ? 'error' : idx === 1 ? 'warning' : 'info'} sx={{ mr: 1, height: 20, fontSize: '0.7rem' }} />}
+                          {evidence}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </AccordionDetails>
+          </Accordion>
+
+          <Divider />
+
           {/* Evidence Section */}
           <Typography variant="subtitle1" fontWeight={600}>
-            Evidence & Documentation
+            Evidence & Documentation (Max 10 items, sorted by priority)
           </Typography>
           <TextField
             fullWidth
@@ -528,8 +726,9 @@ Format it professionally with clear sections and bullet points.`,
             multiline
             minRows={2}
             size="small"
-            placeholder="List the evidence required for this objective..."
+            placeholder="List the evidence required for this objective (max 10 items, highest priority first)..."
             sx={expandableTextFieldSx}
+            helperText="List evidences in order of priority. Use AI generator above to auto-generate."
           />
           <TextField
             fullWidth
