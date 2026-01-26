@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -22,7 +22,15 @@ import TableRow from '@mui/material/TableRow';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
-import { NABH_TEAM } from '../config/hospitalConfig';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepLabel from '@mui/material/StepLabel';
+import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import { NABH_TEAM, HOSPITAL_INFO } from '../config/hospitalConfig';
+import { extractFromDocument, extractCommitteeData, generateImprovedDocument } from '../services/documentExtractor';
 
 interface CommitteeMember {
   name: string;
@@ -103,10 +111,13 @@ const NABH_MANDATORY_COMMITTEES = [
   },
 ];
 
+const UPLOAD_WORKFLOW_STEPS = ['Upload Document', 'Extract Data', 'Review & Edit', 'Generate SOP'];
+
 export default function CommitteesPage() {
   const [committees, setCommittees] = useState<Committee[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [selectedCommittee, setSelectedCommittee] = useState<Committee | null>(null);
   const [newCommittee, setNewCommittee] = useState({
     name: '',
@@ -123,6 +134,25 @@ export default function CommitteesPage() {
     decisions: '',
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+  // Upload workflow states
+  const [uploadWorkflowStep, setUploadWorkflowStep] = useState(0);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractedText, setExtractedText] = useState('');
+  const [extractedCommitteeData, setExtractedCommitteeData] = useState<{
+    name: string;
+    description: string;
+    objectives: string[];
+    members: { name: string; role: string; designation: string }[];
+    meetingFrequency: string;
+    responsibilities: string[];
+  } | null>(null);
+  const [userSuggestions, setUserSuggestions] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedSOP, setGeneratedSOP] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load committees from localStorage
   useEffect(() => {
@@ -232,6 +262,128 @@ export default function CommitteesPage() {
     }
   };
 
+  // Upload workflow handlers
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      setUploadWorkflowStep(1);
+      handleExtractFromFile(file);
+    }
+  };
+
+  const handleExtractFromFile = async (file: File) => {
+    setIsExtracting(true);
+    try {
+      // First extract text from the document
+      const result = await extractFromDocument(file, 'committee');
+      if (result.success && result.text) {
+        setExtractedText(result.text);
+
+        // Then extract structured committee data
+        const committeeData = await extractCommitteeData(result.text);
+        setExtractedCommitteeData(committeeData);
+        setUploadWorkflowStep(2);
+        setSnackbar({ open: true, message: 'Data extracted successfully', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: result.error || 'Failed to extract text', severity: 'error' });
+      }
+    } catch (error) {
+      console.error('Error extracting from file:', error);
+      setSnackbar({ open: true, message: 'Error processing document', severity: 'error' });
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleGenerateSOP = async () => {
+    if (!extractedText) {
+      setSnackbar({ open: true, message: 'No extracted text to generate from', severity: 'error' });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const sop = await generateImprovedDocument(
+        extractedText,
+        'committee',
+        userSuggestions,
+        HOSPITAL_INFO.name
+      );
+      setGeneratedSOP(sop);
+      setUploadWorkflowStep(3);
+      setSnackbar({ open: true, message: 'SOP generated successfully', severity: 'success' });
+    } catch (error) {
+      console.error('Error generating SOP:', error);
+      setSnackbar({ open: true, message: 'Error generating SOP', severity: 'error' });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCreateCommitteeFromExtracted = () => {
+    if (!extractedCommitteeData?.name) {
+      setSnackbar({ open: true, message: 'No committee data extracted', severity: 'error' });
+      return;
+    }
+
+    const committee: Committee = {
+      id: `committee_${Date.now()}`,
+      name: extractedCommitteeData.name,
+      type: 'custom',
+      description: extractedCommitteeData.description || '',
+      chairperson: extractedCommitteeData.members.find(m => m.role.toLowerCase().includes('chair'))?.name || '',
+      members: extractedCommitteeData.members,
+      meetingFrequency: extractedCommitteeData.meetingFrequency || 'Monthly',
+      meetings: [],
+      objectives: extractedCommitteeData.objectives || [],
+      createdAt: new Date().toISOString(),
+    };
+
+    setCommittees([...committees, committee]);
+    resetUploadWorkflow();
+    setSnackbar({ open: true, message: 'Committee created from extracted data', severity: 'success' });
+  };
+
+  const resetUploadWorkflow = () => {
+    setIsUploadDialogOpen(false);
+    setUploadWorkflowStep(0);
+    setUploadedFile(null);
+    setExtractedText('');
+    setExtractedCommitteeData(null);
+    setUserSuggestions('');
+    setGeneratedSOP('');
+    setActiveTab(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDownloadSOP = () => {
+    if (!generatedSOP) return;
+
+    const blob = new Blob([generatedSOP], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${extractedCommitteeData?.name || 'Committee'}_SOP.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintSOP = () => {
+    if (!generatedSOP) return;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(generatedSOP);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -244,13 +396,29 @@ export default function CommitteesPage() {
             Manage NABH mandatory and hospital committees
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Icon>add</Icon>}
-          onClick={() => setIsAddDialogOpen(true)}
-        >
-          Add Committee
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<Icon>upload_file</Icon>}
+            onClick={() => setIsUploadDialogOpen(true)}
+          >
+            Upload SOP
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Icon>add</Icon>}
+            onClick={() => setIsAddDialogOpen(true)}
+          >
+            Add Committee
+          </Button>
+        </Box>
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+          onChange={handleFileUpload}
+        />
       </Box>
 
       {/* Stats */}
@@ -567,6 +735,249 @@ export default function CommitteesPage() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Upload SOP Dialog */}
+      <Dialog
+        open={isUploadDialogOpen}
+        onClose={resetUploadWorkflow}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{ sx: { minHeight: '70vh' } }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Icon color="primary">upload_file</Icon>
+            Upload & Extract Committee SOP
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {/* Stepper */}
+          <Stepper activeStep={uploadWorkflowStep} sx={{ mb: 3, pt: 2 }}>
+            {UPLOAD_WORKFLOW_STEPS.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {/* Step 0: Upload Document */}
+          {uploadWorkflowStep === 0 && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 6,
+                  border: '2px dashed',
+                  borderColor: 'primary.main',
+                  bgcolor: 'primary.50',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'primary.100' }
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Icon sx={{ fontSize: 64, color: 'primary.main' }}>cloud_upload</Icon>
+                <Typography variant="h6" sx={{ mt: 2 }}>
+                  Click to Upload Committee SOP Document
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Supports PDF, Word (DOC/DOCX), and Images (PNG/JPG)
+                </Typography>
+              </Paper>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Upload your existing committee SOP, charter, or any committee-related document to extract and improve it.
+              </Typography>
+            </Box>
+          )}
+
+          {/* Step 1: Extracting */}
+          {uploadWorkflowStep === 1 && isExtracting && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress size={60} />
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Extracting data from {uploadedFile?.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                This may take a moment...
+              </Typography>
+              <LinearProgress sx={{ mt: 3, maxWidth: 400, mx: 'auto' }} />
+            </Box>
+          )}
+
+          {/* Step 2: Review & Edit Extracted Data */}
+          {uploadWorkflowStep === 2 && extractedCommitteeData && (
+            <Box>
+              <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 2 }}>
+                <Tab label="Extracted Data" icon={<Icon>data_object</Icon>} iconPosition="start" />
+                <Tab label="Raw Text" icon={<Icon>text_snippet</Icon>} iconPosition="start" />
+              </Tabs>
+
+              {activeTab === 0 && (
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Typography variant="subtitle2" color="primary" gutterBottom>Committee Name</Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={extractedCommitteeData.name}
+                        onChange={(e) => setExtractedCommitteeData({ ...extractedCommitteeData, name: e.target.value })}
+                      />
+
+                      <Typography variant="subtitle2" color="primary" sx={{ mt: 2 }} gutterBottom>Description</Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        multiline
+                        rows={2}
+                        value={extractedCommitteeData.description}
+                        onChange={(e) => setExtractedCommitteeData({ ...extractedCommitteeData, description: e.target.value })}
+                      />
+
+                      <Typography variant="subtitle2" color="primary" sx={{ mt: 2 }} gutterBottom>Meeting Frequency</Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        select
+                        slotProps={{ select: { native: true } }}
+                        value={extractedCommitteeData.meetingFrequency}
+                        onChange={(e) => setExtractedCommitteeData({ ...extractedCommitteeData, meetingFrequency: e.target.value })}
+                      >
+                        <option value="Weekly">Weekly</option>
+                        <option value="Bi-weekly">Bi-weekly</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="As needed">As needed</option>
+                      </TextField>
+                    </Paper>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Typography variant="subtitle2" color="primary" gutterBottom>
+                        Objectives ({extractedCommitteeData.objectives.length})
+                      </Typography>
+                      <Box sx={{ maxHeight: 150, overflow: 'auto' }}>
+                        {extractedCommitteeData.objectives.map((obj, i) => (
+                          <Chip key={i} label={obj} size="small" sx={{ m: 0.5 }} onDelete={() => {
+                            const newObjs = [...extractedCommitteeData.objectives];
+                            newObjs.splice(i, 1);
+                            setExtractedCommitteeData({ ...extractedCommitteeData, objectives: newObjs });
+                          }} />
+                        ))}
+                      </Box>
+
+                      <Typography variant="subtitle2" color="primary" sx={{ mt: 2 }} gutterBottom>
+                        Members ({extractedCommitteeData.members.length})
+                      </Typography>
+                      <Box sx={{ maxHeight: 150, overflow: 'auto' }}>
+                        {extractedCommitteeData.members.map((m, i) => (
+                          <Chip
+                            key={i}
+                            label={`${m.name} - ${m.role}`}
+                            size="small"
+                            sx={{ m: 0.5 }}
+                            color={m.role.toLowerCase().includes('chair') ? 'primary' : 'default'}
+                          />
+                        ))}
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  <Grid size={12}>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'warning.50' }}>
+                      <Typography variant="subtitle2" color="warning.dark" gutterBottom>
+                        <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>lightbulb</Icon>
+                        Improvement Suggestions (Optional)
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        placeholder="Add any specific improvements you want in the generated SOP (e.g., 'Add infection control responsibilities', 'Include quarterly review procedures')"
+                        value={userSuggestions}
+                        onChange={(e) => setUserSuggestions(e.target.value)}
+                      />
+                    </Paper>
+                  </Grid>
+                </Grid>
+              )}
+
+              {activeTab === 1 && (
+                <Paper variant="outlined" sx={{ p: 2, maxHeight: 400, overflow: 'auto' }}>
+                  <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                    {extractedText}
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+
+          {/* Step 3: Generated SOP */}
+          {uploadWorkflowStep === 3 && generatedSOP && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+                <Button size="small" startIcon={<Icon>print</Icon>} onClick={handlePrintSOP}>
+                  Print
+                </Button>
+                <Button size="small" startIcon={<Icon>download</Icon>} onClick={handleDownloadSOP}>
+                  Download HTML
+                </Button>
+              </Box>
+              <Paper
+                variant="outlined"
+                sx={{ maxHeight: 500, overflow: 'auto', bgcolor: 'white' }}
+              >
+                <div dangerouslySetInnerHTML={{ __html: generatedSOP }} />
+              </Paper>
+            </Box>
+          )}
+
+          {/* Generating indicator */}
+          {isGenerating && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress size={60} />
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Generating Improved Committee SOP
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Creating NABH-compliant committee documentation...
+              </Typography>
+              <LinearProgress sx={{ mt: 3, maxWidth: 400, mx: 'auto' }} />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button onClick={resetUploadWorkflow}>Cancel</Button>
+          {uploadWorkflowStep === 2 && (
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<Icon>group_add</Icon>}
+                onClick={handleCreateCommitteeFromExtracted}
+              >
+                Create Committee
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Icon>auto_awesome</Icon>}
+                onClick={handleGenerateSOP}
+                disabled={isGenerating}
+              >
+                Generate Improved SOP
+              </Button>
+            </>
+          )}
+          {uploadWorkflowStep === 3 && (
+            <Button
+              variant="contained"
+              startIcon={<Icon>group_add</Icon>}
+              onClick={handleCreateCommitteeFromExtracted}
+            >
+              Create Committee & Close
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

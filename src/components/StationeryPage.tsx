@@ -21,7 +21,12 @@ import Tab from '@mui/material/Tab';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
-import { getGeminiApiKey } from '../lib/supabase';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepLabel from '@mui/material/StepLabel';
+import LinearProgress from '@mui/material/LinearProgress';
+import { extractFromDocument, generateImprovedDocument, analyzeDocument } from '../services/documentExtractor';
+import { HOSPITAL_INFO } from '../config/hospitalConfig';
 
 interface StationeryItem {
   id: string;
@@ -29,24 +34,35 @@ interface StationeryItem {
   category: string;
   description: string;
   originalFile?: string;
+  originalFileName?: string;
   originalFileType?: string;
+  extractedText?: string;
+  analyzedData?: {
+    documentType: string;
+    sections: { heading: string; content: string }[];
+    suggestions?: string[];
+  };
   improvedContent?: string;
-  suggestions: string[];
-  status: 'pending' | 'improved' | 'approved';
+  userSuggestions: string[];
+  status: 'pending' | 'extracted' | 'improved' | 'approved';
   createdAt: string;
   updatedAt: string;
 }
 
 const STATIONERY_CATEGORIES = [
-  { id: 'forms', label: 'Patient Forms', icon: 'assignment' },
-  { id: 'registers', label: 'Registers', icon: 'menu_book' },
-  { id: 'letterheads', label: 'Letterheads', icon: 'mail' },
-  { id: 'certificates', label: 'Certificates', icon: 'workspace_premium' },
-  { id: 'consent', label: 'Consent Forms', icon: 'fact_check' },
-  { id: 'reports', label: 'Report Templates', icon: 'summarize' },
-  { id: 'labels', label: 'Labels & Tags', icon: 'label' },
-  { id: 'other', label: 'Other Documents', icon: 'description' },
+  { id: 'forms', label: 'Patient Forms', icon: 'assignment', examples: ['Registration Form', 'Consent Form', 'Discharge Summary'] },
+  { id: 'registers', label: 'Registers', icon: 'menu_book', examples: ['OPD Register', 'IPD Register', 'Medication Error Register'] },
+  { id: 'letterheads', label: 'Letterheads', icon: 'mail', examples: ['Official Letterhead', 'Prescription Pad', 'Medical Certificate'] },
+  { id: 'certificates', label: 'Certificates', icon: 'workspace_premium', examples: ['Birth Certificate', 'Death Certificate', 'Fitness Certificate'] },
+  { id: 'consent', label: 'Consent Forms', icon: 'fact_check', examples: ['Surgical Consent', 'Blood Transfusion Consent', 'Anesthesia Consent'] },
+  { id: 'reports', label: 'Report Templates', icon: 'summarize', examples: ['Lab Report', 'Radiology Report', 'Discharge Report'] },
+  { id: 'labels', label: 'Labels & Tags', icon: 'label', examples: ['Patient Wristband', 'Medication Label', 'Sample Label'] },
+  { id: 'checklists', label: 'Checklists', icon: 'checklist', examples: ['Surgical Safety Checklist', 'Nursing Checklist', 'Audit Checklist'] },
+  { id: 'sops', label: 'SOPs', icon: 'description', examples: ['Procedure SOPs', 'Safety SOPs', 'Quality SOPs'] },
+  { id: 'other', label: 'Other Documents', icon: 'folder', examples: ['Policies', 'Guidelines', 'Manuals'] },
 ];
+
+const WORKFLOW_STEPS = ['Upload Document', 'Extract Content', 'Add Suggestions', 'Generate Improved'];
 
 export default function StationeryPage() {
   const [stationeryItems, setStationeryItems] = useState<StationeryItem[]>([]);
@@ -54,16 +70,25 @@ export default function StationeryPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StationeryItem | null>(null);
+  const [activeStep, setActiveStep] = useState(0);
+
+  // Form states
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('forms');
   const [newItemDescription, setNewItemDescription] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFilePreview, setUploadedFilePreview] = useState<string>('');
-  const [userSuggestion, setUserSuggestion] = useState('');
-  const [isImproving, setIsImproving] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
   const [extractedText, setExtractedText] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [analyzedData, setAnalyzedData] = useState<StationeryItem['analyzedData'] | null>(null);
+  const [userSuggestion, setUserSuggestion] = useState('');
+  const [improvedContent, setImprovedContent] = useState('');
+
+  // Loading states
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load stationery items from localStorage
@@ -76,7 +101,9 @@ export default function StationeryPage() {
 
   // Save stationery items to localStorage
   useEffect(() => {
-    localStorage.setItem('nabh_stationery_items', JSON.stringify(stationeryItems));
+    if (stationeryItems.length > 0) {
+      localStorage.setItem('nabh_stationery_items', JSON.stringify(stationeryItems));
+    }
   }, [stationeryItems]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +111,7 @@ export default function StationeryPage() {
     if (!file) return;
 
     setUploadedFile(file);
+    setActiveStep(0);
 
     // Create preview for images
     if (file.type.startsWith('image/')) {
@@ -92,65 +120,94 @@ export default function StationeryPage() {
         setUploadedFilePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
-
-      // Extract text using Gemini Vision
-      await extractTextFromImage(file);
     } else {
       setUploadedFilePreview('');
-      setExtractedText('PDF or document file - text extraction will be attempted');
     }
+
+    // Auto-extract text
+    await handleExtractText(file);
   };
 
-  const extractTextFromImage = async (file: File) => {
-    const geminiApiKey = getGeminiApiKey();
-    if (!geminiApiKey) {
-      setSnackbar({ open: true, message: 'Please configure Gemini API key in settings', severity: 'error' });
-      return;
-    }
-
+  const handleExtractText = async (file: File) => {
     setIsExtracting(true);
-    try {
-      const base64 = await fileToBase64(file);
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: 'Extract all text content from this hospital stationery/document image. Identify: 1) Document type, 2) All text fields and their labels, 3) Any formatting issues, 4) Suggestions for improvement. Format the output clearly.' },
-                { inline_data: { mime_type: file.type, data: base64.split(',')[1] } }
-              ]
-            }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
-          }),
-        }
-      );
+    setSnackbar({ open: true, message: 'Extracting text from document...', severity: 'info' });
 
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not extract text';
-      setExtractedText(text);
+    try {
+      const result = await extractFromDocument(file, newItemCategory);
+      if (result.success) {
+        setExtractedText(result.text);
+        setActiveStep(1);
+        setSnackbar({ open: true, message: 'Text extracted successfully!', severity: 'success' });
+
+        // Auto-analyze the document
+        await handleAnalyzeDocument(result.text);
+      } else {
+        setSnackbar({ open: true, message: result.error || 'Failed to extract text', severity: 'error' });
+      }
     } catch (error) {
       console.error('Error extracting text:', error);
-      setSnackbar({ open: true, message: 'Failed to extract text from image', severity: 'error' });
+      setSnackbar({ open: true, message: 'Failed to extract text from document', severity: 'error' });
     } finally {
       setIsExtracting(false);
     }
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-    });
+  const handleAnalyzeDocument = async (text: string) => {
+    setIsAnalyzing(true);
+    try {
+      const analysis = await analyzeDocument(text, 'stationery');
+      setAnalyzedData({
+        documentType: analysis.documentType,
+        sections: analysis.sections,
+        suggestions: analysis.suggestions,
+      });
+
+      // Auto-fill name if detected
+      if (analysis.title && !newItemName) {
+        setNewItemName(analysis.title);
+      }
+    } catch (error) {
+      console.error('Error analyzing document:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  const handleAddStationery = () => {
+  const handleGenerateImproved = async () => {
+    if (!extractedText) {
+      setSnackbar({ open: true, message: 'Please extract text first', severity: 'error' });
+      return;
+    }
+
+    setIsGenerating(true);
+    setActiveStep(3);
+    setSnackbar({ open: true, message: 'Generating improved document...', severity: 'info' });
+
+    try {
+      const content = await generateImprovedDocument(
+        extractedText,
+        'stationery',
+        userSuggestion,
+        HOSPITAL_INFO.name
+      );
+
+      if (content) {
+        setImprovedContent(content);
+        setSnackbar({ open: true, message: 'Improved document generated!', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: 'Failed to generate document', severity: 'error' });
+      }
+    } catch (error) {
+      console.error('Error generating document:', error);
+      setSnackbar({ open: true, message: 'Failed to generate improved document', severity: 'error' });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveItem = () => {
     if (!newItemName.trim()) {
-      setSnackbar({ open: true, message: 'Please enter a name for the stationery item', severity: 'error' });
+      setSnackbar({ open: true, message: 'Please enter a name for the document', severity: 'error' });
       return;
     }
 
@@ -160,17 +217,21 @@ export default function StationeryPage() {
       category: newItemCategory,
       description: newItemDescription,
       originalFile: uploadedFilePreview,
+      originalFileName: uploadedFile?.name,
       originalFileType: uploadedFile?.type,
-      suggestions: userSuggestion ? [userSuggestion] : [],
-      status: 'pending',
+      extractedText: extractedText,
+      analyzedData: analyzedData || undefined,
+      improvedContent: improvedContent,
+      userSuggestions: userSuggestion ? [userSuggestion] : [],
+      status: improvedContent ? 'improved' : extractedText ? 'extracted' : 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    setStationeryItems([...stationeryItems, newItem]);
+    setStationeryItems(prev => [...prev, newItem]);
     setIsUploadDialogOpen(false);
     resetForm();
-    setSnackbar({ open: true, message: 'Stationery item added successfully', severity: 'success' });
+    setSnackbar({ open: true, message: 'Document saved successfully!', severity: 'success' });
   };
 
   const resetForm = () => {
@@ -179,94 +240,39 @@ export default function StationeryPage() {
     setNewItemDescription('');
     setUploadedFile(null);
     setUploadedFilePreview('');
-    setUserSuggestion('');
     setExtractedText('');
+    setAnalyzedData(null);
+    setUserSuggestion('');
+    setImprovedContent('');
+    setActiveStep(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleImproveStationery = async (item: StationeryItem) => {
-    const geminiApiKey = getGeminiApiKey();
-    if (!geminiApiKey) {
-      setSnackbar({ open: true, message: 'Please configure Gemini API key in settings', severity: 'error' });
-      return;
-    }
-
-    setIsImproving(true);
+  const handleReprocessItem = async (item: StationeryItem) => {
     setSelectedItem(item);
-
-    try {
-      const prompt = `You are a hospital quality documentation expert. Create an improved version of this hospital stationery/document.
-
-Document Name: ${item.name}
-Category: ${item.category}
-Description: ${item.description}
-${item.suggestions.length > 0 ? `User Suggestions: ${item.suggestions.join(', ')}` : ''}
-
-Requirements:
-1. Create a professional, NABH-compliant document template
-2. Use proper hospital branding (Hope Hospital)
-3. Include all necessary fields and sections
-4. Ensure proper formatting and layout
-5. Add any missing required fields for NABH compliance
-6. Make it print-ready with proper margins
-
-Generate complete HTML with embedded CSS for the improved document. Include:
-- Hospital header with logo placeholder
-- Professional typography
-- Clear field labels and input areas
-- Footer with document control information
-- Print-friendly styling`;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
-          }),
-        }
-      );
-
-      const data = await response.json();
-      let content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-      // Extract HTML from response
-      const htmlMatch = content.match(/```html\n?([\s\S]*?)\n?```/);
-      if (htmlMatch) {
-        content = htmlMatch[1];
-      }
-
-      // Update item with improved content
-      setStationeryItems(prev => prev.map(i =>
-        i.id === item.id
-          ? { ...i, improvedContent: content, status: 'improved' as const, updatedAt: new Date().toISOString() }
-          : i
-      ));
-
-      setSnackbar({ open: true, message: 'Document improved successfully!', severity: 'success' });
-    } catch (error) {
-      console.error('Error improving document:', error);
-      setSnackbar({ open: true, message: 'Failed to improve document', severity: 'error' });
-    } finally {
-      setIsImproving(false);
-    }
-  };
-
-  const handleAddSuggestion = (itemId: string, suggestion: string) => {
-    if (!suggestion.trim()) return;
-
-    setStationeryItems(prev => prev.map(item =>
-      item.id === itemId
-        ? { ...item, suggestions: [...item.suggestions, suggestion], updatedAt: new Date().toISOString() }
-        : item
-    ));
+    setNewItemName(item.name);
+    setNewItemCategory(item.category);
+    setNewItemDescription(item.description);
+    setExtractedText(item.extractedText || '');
+    setUserSuggestion(item.userSuggestions.join('\n'));
+    setImprovedContent(item.improvedContent || '');
+    setUploadedFilePreview(item.originalFile || '');
+    setActiveStep(item.extractedText ? 2 : 0);
+    setIsUploadDialogOpen(true);
   };
 
   const handleDeleteItem = (itemId: string) => {
     setStationeryItems(prev => prev.filter(item => item.id !== itemId));
-    setSnackbar({ open: true, message: 'Item deleted', severity: 'success' });
+    setSnackbar({ open: true, message: 'Document deleted', severity: 'success' });
+  };
+
+  const handlePrintDocument = (content: string) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(content);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   const filteredItems = selectedCategory === 'all'
@@ -275,9 +281,19 @@ Generate complete HTML with embedded CSS for the improved document. Include:
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'extracted': return 'info';
       case 'improved': return 'success';
       case 'approved': return 'primary';
       default: return 'warning';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'extracted': return 'text_snippet';
+      case 'improved': return 'check_circle';
+      case 'approved': return 'verified';
+      default: return 'pending';
     }
   };
 
@@ -290,17 +306,26 @@ Generate complete HTML with embedded CSS for the improved document. Include:
             Hospital Stationery
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Manage and improve hospital stationery, forms, and documents
+            Upload existing documents, extract content, and generate improved NABH-compliant versions
           </Typography>
         </Box>
         <Button
           variant="contained"
-          startIcon={<Icon>add</Icon>}
-          onClick={() => setIsUploadDialogOpen(true)}
+          startIcon={<Icon>upload_file</Icon>}
+          onClick={() => { resetForm(); setIsUploadDialogOpen(true); }}
+          size="large"
         >
-          Add Stationery
+          Upload Document
         </Button>
       </Box>
+
+      {/* Quick Info */}
+      <Alert severity="info" icon={<Icon>lightbulb</Icon>} sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>How it works:</strong> Upload your existing hospital documents (PDF, Word, or images) and the system will extract the content,
+          analyze it, and generate professionally formatted, NABH-compliant versions. You can add your suggestions for improvements before generating.
+        </Typography>
+      </Alert>
 
       {/* Category Tabs */}
       <Paper sx={{ mb: 3 }}>
@@ -310,7 +335,7 @@ Generate complete HTML with embedded CSS for the improved document. Include:
           variant="scrollable"
           scrollButtons="auto"
         >
-          <Tab value="all" label="All Items" icon={<Icon>folder</Icon>} iconPosition="start" />
+          <Tab value="all" label="All Documents" icon={<Icon>folder</Icon>} iconPosition="start" />
           {STATIONERY_CATEGORIES.map(cat => (
             <Tab key={cat.id} value={cat.id} label={cat.label} icon={<Icon>{cat.icon}</Icon>} iconPosition="start" />
           ))}
@@ -322,7 +347,7 @@ Generate complete HTML with embedded CSS for the improved document. Include:
         <Grid size={{ xs: 6, md: 3 }}>
           <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.50' }}>
             <Typography variant="h4" color="primary" fontWeight={700}>{stationeryItems.length}</Typography>
-            <Typography variant="body2" color="text.secondary">Total Items</Typography>
+            <Typography variant="body2" color="text.secondary">Total Documents</Typography>
           </Paper>
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -330,7 +355,15 @@ Generate complete HTML with embedded CSS for the improved document. Include:
             <Typography variant="h4" color="warning.main" fontWeight={700}>
               {stationeryItems.filter(i => i.status === 'pending').length}
             </Typography>
-            <Typography variant="body2" color="text.secondary">Pending</Typography>
+            <Typography variant="body2" color="text.secondary">Pending Extraction</Typography>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'info.50' }}>
+            <Typography variant="h4" color="info.main" fontWeight={700}>
+              {stationeryItems.filter(i => i.status === 'extracted').length}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">Text Extracted</Typography>
           </Paper>
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -338,31 +371,23 @@ Generate complete HTML with embedded CSS for the improved document. Include:
             <Typography variant="h4" color="success.main" fontWeight={700}>
               {stationeryItems.filter(i => i.status === 'improved').length}
             </Typography>
-            <Typography variant="body2" color="text.secondary">Improved</Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'info.50' }}>
-            <Typography variant="h4" color="info.main" fontWeight={700}>
-              {stationeryItems.filter(i => i.status === 'approved').length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">Approved</Typography>
+            <Typography variant="body2" color="text.secondary">Improved & Ready</Typography>
           </Paper>
         </Grid>
       </Grid>
 
-      {/* Stationery Items Grid */}
+      {/* Documents Grid */}
       {filteredItems.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: 'center' }}>
           <Icon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }}>inventory_2</Icon>
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            No stationery items yet
+            No documents yet
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Start by uploading your hospital's existing stationery to improve them
+            Upload your existing hospital stationery to extract and improve them
           </Typography>
-          <Button variant="contained" startIcon={<Icon>add</Icon>} onClick={() => setIsUploadDialogOpen(true)}>
-            Add First Item
+          <Button variant="contained" startIcon={<Icon>upload_file</Icon>} onClick={() => setIsUploadDialogOpen(true)}>
+            Upload First Document
           </Button>
         </Paper>
       ) : (
@@ -375,35 +400,45 @@ Generate complete HTML with embedded CSS for the improved document. Include:
                     <Chip
                       label={STATIONERY_CATEGORIES.find(c => c.id === item.category)?.label || item.category}
                       size="small"
-                      icon={<Icon sx={{ fontSize: 16 }}>{STATIONERY_CATEGORIES.find(c => c.id === item.category)?.icon || 'description'}</Icon>}
+                      icon={<Icon sx={{ fontSize: 16 }}>{STATIONERY_CATEGORIES.find(c => c.id === item.category)?.icon}</Icon>}
                     />
-                    <Chip label={item.status} size="small" color={getStatusColor(item.status)} />
+                    <Chip
+                      label={item.status}
+                      size="small"
+                      color={getStatusColor(item.status)}
+                      icon={<Icon sx={{ fontSize: 16 }}>{getStatusIcon(item.status)}</Icon>}
+                    />
                   </Box>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
+                  <Typography variant="h6" fontWeight={600} gutterBottom noWrap>
                     {item.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {item.description || 'No description'}
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, height: 40, overflow: 'hidden' }}>
+                    {item.description || item.originalFileName || 'No description'}
                   </Typography>
-                  {item.suggestions.length > 0 && (
+                  {item.analyzedData?.suggestions && item.analyzedData.suggestions.length > 0 && (
                     <Box sx={{ mt: 1 }}>
-                      <Typography variant="caption" color="text.secondary">Suggestions:</Typography>
-                      {item.suggestions.map((s, i) => (
-                        <Chip key={i} label={s} size="small" variant="outlined" sx={{ m: 0.5 }} />
-                      ))}
+                      <Typography variant="caption" color="text.secondary">AI Suggestions:</Typography>
+                      <Typography variant="caption" display="block" color="info.main" noWrap>
+                        {item.analyzedData.suggestions[0]}
+                      </Typography>
                     </Box>
                   )}
                   {item.originalFile && (
-                    <Box sx={{ mt: 1 }}>
-                      <img src={item.originalFile} alt={item.name} style={{ width: '100%', maxHeight: 100, objectFit: 'contain', borderRadius: 8 }} />
+                    <Box sx={{ mt: 1, height: 80, overflow: 'hidden', borderRadius: 1, bgcolor: 'grey.100' }}>
+                      <img src={item.originalFile} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </Box>
                   )}
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
                   <Box>
-                    <Tooltip title="View/Edit">
+                    <Tooltip title="View Details">
                       <IconButton size="small" onClick={() => { setSelectedItem(item); setIsViewDialogOpen(true); }}>
                         <Icon>visibility</Icon>
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Re-process">
+                      <IconButton size="small" color="primary" onClick={() => handleReprocessItem(item)}>
+                        <Icon>refresh</Icon>
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Delete">
@@ -412,16 +447,17 @@ Generate complete HTML with embedded CSS for the improved document. Include:
                       </IconButton>
                     </Tooltip>
                   </Box>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    color="primary"
-                    startIcon={isImproving && selectedItem?.id === item.id ? <CircularProgress size={16} color="inherit" /> : <Icon>auto_fix_high</Icon>}
-                    onClick={() => handleImproveStationery(item)}
-                    disabled={isImproving}
-                  >
-                    {item.status === 'improved' ? 'Re-improve' : 'Improve'}
-                  </Button>
+                  {item.improvedContent && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      startIcon={<Icon>print</Icon>}
+                      onClick={() => handlePrintDocument(item.improvedContent!)}
+                    >
+                      Print
+                    </Button>
+                  )}
                 </CardActions>
               </Card>
             </Grid>
@@ -429,122 +465,208 @@ Generate complete HTML with embedded CSS for the improved document. Include:
         </Grid>
       )}
 
-      {/* Upload Dialog */}
-      <Dialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} maxWidth="md" fullWidth>
+      {/* Upload/Process Dialog */}
+      <Dialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} maxWidth="lg" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Icon color="primary">upload_file</Icon>
-            Add New Stationery Item
+            {selectedItem ? 'Re-process Document' : 'Upload & Improve Document'}
           </Box>
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Item Name"
-                value={newItemName}
-                onChange={(e) => setNewItemName(e.target.value)}
-                placeholder="e.g., Patient Registration Form"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                select
-                label="Category"
-                value={newItemCategory}
-                onChange={(e) => setNewItemCategory(e.target.value)}
-                sx={{ mb: 2 }}
-                slotProps={{ select: { native: true } }}
-              >
-                {STATIONERY_CATEGORIES.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.label}</option>
-                ))}
-              </TextField>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                label="Description"
-                value={newItemDescription}
-                onChange={(e) => setNewItemDescription(e.target.value)}
-                placeholder="Brief description of the document"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                label="Improvement Suggestions"
-                value={userSuggestion}
-                onChange={(e) => setUserSuggestion(e.target.value)}
-                placeholder="What improvements would you like? (optional)"
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept="image/*,.pdf"
-                style={{ display: 'none' }}
-              />
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 3,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: 'action.hover' },
-                  minHeight: 200,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploadedFilePreview ? (
-                  <Box>
-                    <img src={uploadedFilePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 8 }} />
-                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>{uploadedFile?.name}</Typography>
+          {/* Workflow Stepper */}
+          <Stepper activeStep={activeStep} sx={{ mb: 3, mt: 1 }}>
+            {WORKFLOW_STEPS.map((label, index) => (
+              <Step key={label} completed={activeStep > index}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          <Grid container spacing={3}>
+            {/* Left Column - Upload & Details */}
+            <Grid size={{ xs: 12, md: 5 }}>
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>Document Details</Typography>
+                <TextField
+                  fullWidth
+                  label="Document Name"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="e.g., Patient Registration Form"
+                  size="small"
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  select
+                  label="Category"
+                  value={newItemCategory}
+                  onChange={(e) => setNewItemCategory(e.target.value)}
+                  size="small"
+                  sx={{ mb: 2 }}
+                  slotProps={{ select: { native: true } }}
+                >
+                  {STATIONERY_CATEGORIES.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                  ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Description (optional)"
+                  value={newItemDescription}
+                  onChange={(e) => setNewItemDescription(e.target.value)}
+                  size="small"
+                />
+              </Paper>
+
+              {/* File Upload Area */}
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>Upload Original Document</Typography>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*,.pdf,.doc,.docx"
+                  style={{ display: 'none' }}
+                />
+                <Box
+                  sx={{
+                    border: '2px dashed',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    p: 3,
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploadedFilePreview ? (
+                    <Box>
+                      <img src={uploadedFilePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 8 }} />
+                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>{uploadedFile?.name}</Typography>
+                    </Box>
+                  ) : uploadedFile ? (
+                    <Box>
+                      <Icon sx={{ fontSize: 48, color: 'primary.main' }}>description</Icon>
+                      <Typography variant="body2">{uploadedFile.name}</Typography>
+                    </Box>
+                  ) : (
+                    <>
+                      <Icon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }}>cloud_upload</Icon>
+                      <Typography variant="body2" color="text.secondary">
+                        Click to upload document
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Supports PDF, Word, and images
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+                {isExtracting && (
+                  <Box sx={{ mt: 2 }}>
+                    <LinearProgress />
+                    <Typography variant="caption" color="text.secondary">Extracting text...</Typography>
                   </Box>
-                ) : (
-                  <>
-                    <Icon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }}>cloud_upload</Icon>
-                    <Typography variant="body2" color="text.secondary">
-                      Click to upload existing document
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Supports images and PDF files
-                    </Typography>
-                  </>
                 )}
               </Paper>
-              {isExtracting && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                  <CircularProgress size={16} />
-                  <Typography variant="caption">Extracting text...</Typography>
+
+              {/* User Suggestions */}
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>Your Improvement Suggestions</Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={userSuggestion}
+                  onChange={(e) => { setUserSuggestion(e.target.value); setActiveStep(Math.max(activeStep, 2)); }}
+                  placeholder="What improvements would you like?&#10;e.g., Add NABH logo, include patient photo field, add QR code..."
+                  size="small"
+                />
+              </Paper>
+            </Grid>
+
+            {/* Right Column - Extracted & Improved */}
+            <Grid size={{ xs: 12, md: 7 }}>
+              {/* Extracted Text */}
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2">Extracted Content</Typography>
+                  {isAnalyzing && <CircularProgress size={16} />}
                 </Box>
-              )}
-              {extractedText && (
-                <Alert severity="info" sx={{ mt: 1 }}>
-                  <Typography variant="caption">{extractedText.substring(0, 200)}...</Typography>
-                </Alert>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={6}
+                  value={extractedText}
+                  onChange={(e) => setExtractedText(e.target.value)}
+                  placeholder="Extracted text will appear here after uploading a document..."
+                  size="small"
+                />
+                {analyzedData?.suggestions && analyzedData.suggestions.length > 0 && (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    <Typography variant="caption" fontWeight={600}>AI Analysis Suggestions:</Typography>
+                    <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+                      {analyzedData.suggestions.slice(0, 3).map((s, i) => (
+                        <li key={i}><Typography variant="caption">{s}</Typography></li>
+                      ))}
+                    </ul>
+                  </Alert>
+                )}
+              </Paper>
+
+              {/* Generate Button */}
+              <Box sx={{ textAlign: 'center', mb: 2 }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <Icon>auto_awesome</Icon>}
+                  onClick={handleGenerateImproved}
+                  disabled={isGenerating || !extractedText}
+                  sx={{ px: 4 }}
+                >
+                  {isGenerating ? 'Generating...' : 'Generate Improved Document'}
+                </Button>
+              </Box>
+
+              {/* Improved Preview */}
+              {improvedContent && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">Improved Document Preview</Typography>
+                    <Button size="small" startIcon={<Icon>print</Icon>} onClick={() => handlePrintDocument(improvedContent)}>
+                      Print
+                    </Button>
+                  </Box>
+                  <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                    <iframe
+                      srcDoc={improvedContent}
+                      title="Improved Document"
+                      style={{ width: '100%', height: 300, border: 'none' }}
+                    />
+                  </Box>
+                </Paper>
               )}
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => { setIsUploadDialogOpen(false); resetForm(); }}>Cancel</Button>
-          <Button variant="contained" onClick={handleAddStationery} startIcon={<Icon>add</Icon>}>
-            Add Item
+          <Button
+            variant="contained"
+            onClick={handleSaveItem}
+            startIcon={<Icon>save</Icon>}
+            disabled={!newItemName}
+          >
+            Save Document
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* View/Edit Dialog */}
+      {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onClose={() => setIsViewDialogOpen(false)} maxWidth="lg" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -559,50 +681,34 @@ Generate complete HTML with embedded CSS for the improved document. Include:
           {selectedItem && (
             <Grid container spacing={2}>
               {selectedItem.originalFile && (
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="subtitle2" gutterBottom>Original Document</Typography>
                   <Paper variant="outlined" sx={{ p: 1 }}>
                     <img src={selectedItem.originalFile} alt="Original" style={{ width: '100%', borderRadius: 4 }} />
                   </Paper>
                 </Grid>
               )}
-              <Grid size={{ xs: 12, md: selectedItem.originalFile ? 6 : 12 }}>
-                <Typography variant="subtitle2" gutterBottom>Improved Document</Typography>
-                {selectedItem.improvedContent ? (
-                  <Paper variant="outlined" sx={{ p: 1, maxHeight: 400, overflow: 'auto' }}>
-                    <iframe
-                      srcDoc={selectedItem.improvedContent}
-                      title="Improved"
-                      style={{ width: '100%', minHeight: 350, border: 'none' }}
-                    />
-                  </Paper>
-                ) : (
-                  <Alert severity="info">
-                    Click "Improve" to generate an improved version of this document
-                  </Alert>
+              <Grid size={{ xs: 12, md: selectedItem.originalFile ? 8 : 12 }}>
+                {selectedItem.extractedText && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>Extracted Text</Typography>
+                    <Paper variant="outlined" sx={{ p: 2, maxHeight: 200, overflow: 'auto', bgcolor: 'grey.50' }}>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {selectedItem.extractedText}
+                      </Typography>
+                    </Paper>
+                  </Box>
                 )}
-              </Grid>
-              <Grid size={12}>
-                <Typography variant="subtitle2" gutterBottom>Add Suggestion</Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Enter your suggestion for improvement..."
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAddSuggestion(selectedItem.id, (e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = '';
-                      }
-                    }}
-                  />
-                  <Button variant="outlined" startIcon={<Icon>send</Icon>}>Add</Button>
-                </Box>
-                {selectedItem.suggestions.length > 0 && (
-                  <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selectedItem.suggestions.map((s, i) => (
-                      <Chip key={i} label={s} size="small" variant="outlined" />
-                    ))}
+                {selectedItem.improvedContent && (
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom>Improved Document</Typography>
+                    <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                      <iframe
+                        srcDoc={selectedItem.improvedContent}
+                        title="Improved"
+                        style={{ width: '100%', height: 400, border: 'none' }}
+                      />
+                    </Paper>
                   </Box>
                 )}
               </Grid>
@@ -615,16 +721,9 @@ Generate complete HTML with embedded CSS for the improved document. Include:
             <Button
               variant="contained"
               startIcon={<Icon>print</Icon>}
-              onClick={() => {
-                const printWindow = window.open('', '_blank');
-                if (printWindow && selectedItem.improvedContent) {
-                  printWindow.document.write(selectedItem.improvedContent);
-                  printWindow.document.close();
-                  printWindow.print();
-                }
-              }}
+              onClick={() => handlePrintDocument(selectedItem.improvedContent!)}
             >
-              Print
+              Print Improved
             </Button>
           )}
         </DialogActions>

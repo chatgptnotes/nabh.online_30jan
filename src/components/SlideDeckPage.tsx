@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -19,8 +19,15 @@ import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepLabel from '@mui/material/StepLabel';
+import LinearProgress from '@mui/material/LinearProgress';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import { getGeminiApiKey } from '../lib/supabase';
 import { HOSPITAL_INFO } from '../config/hospitalConfig';
+import { extractFromDocument, generateImprovedDocument } from '../services/documentExtractor';
 
 interface Slide {
   id: string;
@@ -40,6 +47,8 @@ interface Presentation {
   updatedAt: string;
   presentedAt?: string;
 }
+
+const UPLOAD_WORKFLOW_STEPS = ['Upload Presentation', 'Extract Content', 'Review & Edit', 'Generate Improved'];
 
 const PRESENTATION_TEMPLATES = [
   {
@@ -84,6 +93,19 @@ export default function SlideDeckPage() {
     customSections: '',
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+  // Upload workflow states
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [uploadWorkflowStep, setUploadWorkflowStep] = useState(0);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isExtractingUpload, setIsExtractingUpload] = useState(false);
+  const [extractedPresentationText, setExtractedPresentationText] = useState('');
+  const [extractedSlides, setExtractedSlides] = useState<{ title: string; content: string }[]>([]);
+  const [userSuggestions, setUserSuggestions] = useState('');
+  const [isGeneratingUpload, setIsGeneratingUpload] = useState(false);
+  const [generatedPresentationHTML, setGeneratedPresentationHTML] = useState('');
+  const [activeUploadTab, setActiveUploadTab] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load presentations from localStorage
   useEffect(() => {
@@ -304,6 +326,180 @@ ${presentation.slides.map(slide => `
     }
   };
 
+  // Upload workflow handlers
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      setUploadWorkflowStep(1);
+      handleExtractFromFile(file);
+    }
+  };
+
+  const handleExtractFromFile = async (file: File) => {
+    setIsExtractingUpload(true);
+    try {
+      const result = await extractFromDocument(file, 'presentation');
+      if (result.success && result.text) {
+        setExtractedPresentationText(result.text);
+
+        // Try to parse slides from the extracted text
+        const slidesData = parseSlides(result.text);
+        setExtractedSlides(slidesData);
+        setUploadWorkflowStep(2);
+        setSnackbar({ open: true, message: `Extracted ${slidesData.length} slides`, severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: result.error || 'Failed to extract content', severity: 'error' });
+      }
+    } catch (error) {
+      console.error('Error extracting from file:', error);
+      setSnackbar({ open: true, message: 'Error processing document', severity: 'error' });
+    } finally {
+      setIsExtractingUpload(false);
+    }
+  };
+
+  const parseSlides = (text: string): { title: string; content: string }[] => {
+    // Try to identify slide boundaries in the extracted text
+    const slides: { title: string; content: string }[] = [];
+
+    // Split by paragraph breaks to identify sections
+    const sections = text.split(/\n{2,}/);
+
+    if (sections.length < 2) {
+      // If no clear sections, treat the whole text as one slide
+      return [{ title: 'Imported Content', content: text }];
+    }
+
+    let currentTitle = '';
+    let currentContent = '';
+
+    sections.forEach((section, i) => {
+      const trimmed = section.trim();
+      if (!trimmed) return;
+
+      // Check if this looks like a title (short, possibly uppercase)
+      if (trimmed.length < 80 && !trimmed.includes('.') && i === 0) {
+        if (currentTitle && currentContent) {
+          slides.push({ title: currentTitle, content: currentContent.trim() });
+        }
+        currentTitle = trimmed;
+        currentContent = '';
+      } else if (trimmed.length < 60 && /^[A-Z]/.test(trimmed) && !trimmed.includes('.')) {
+        if (currentTitle && currentContent) {
+          slides.push({ title: currentTitle, content: currentContent.trim() });
+        }
+        currentTitle = trimmed;
+        currentContent = '';
+      } else {
+        currentContent += (currentContent ? '\n\n' : '') + trimmed;
+      }
+    });
+
+    // Don't forget the last slide
+    if (currentTitle || currentContent) {
+      slides.push({
+        title: currentTitle || 'Slide ' + (slides.length + 1),
+        content: currentContent.trim()
+      });
+    }
+
+    return slides.length > 0 ? slides : [{ title: 'Imported Content', content: text }];
+  };
+
+  const handleGenerateImprovedPresentation = async () => {
+    if (!extractedPresentationText) {
+      setSnackbar({ open: true, message: 'No extracted content to generate from', severity: 'error' });
+      return;
+    }
+
+    setIsGeneratingUpload(true);
+    try {
+      const html = await generateImprovedDocument(
+        extractedPresentationText,
+        'presentation',
+        userSuggestions,
+        HOSPITAL_INFO.name
+      );
+      setGeneratedPresentationHTML(html);
+      setUploadWorkflowStep(3);
+      setSnackbar({ open: true, message: 'Improved presentation generated', severity: 'success' });
+    } catch (error) {
+      console.error('Error generating presentation:', error);
+      setSnackbar({ open: true, message: 'Error generating presentation', severity: 'error' });
+    } finally {
+      setIsGeneratingUpload(false);
+    }
+  };
+
+  const handleCreatePresentationFromExtracted = () => {
+    if (extractedSlides.length === 0) {
+      setSnackbar({ open: true, message: 'No slides to import', severity: 'error' });
+      return;
+    }
+
+    const slides: Slide[] = extractedSlides.map((s, i) => ({
+      id: `slide_${Date.now()}_${i}`,
+      title: s.title,
+      content: s.content,
+      type: i === 0 ? 'title' : i === extractedSlides.length - 1 ? 'summary' : 'content',
+      notes: '',
+    }));
+
+    const presentation: Presentation = {
+      id: `presentation_${Date.now()}`,
+      name: uploadedFile?.name.replace(/\.[^.]+$/, '') || 'Imported Presentation',
+      description: 'Imported from uploaded document',
+      slides,
+      status: 'draft',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setPresentations([...presentations, presentation]);
+    resetUploadWorkflow();
+    setSnackbar({ open: true, message: 'Presentation imported successfully', severity: 'success' });
+  };
+
+  const resetUploadWorkflow = () => {
+    setIsUploadDialogOpen(false);
+    setUploadWorkflowStep(0);
+    setUploadedFile(null);
+    setExtractedPresentationText('');
+    setExtractedSlides([]);
+    setUserSuggestions('');
+    setGeneratedPresentationHTML('');
+    setActiveUploadTab(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDownloadGeneratedPresentation = () => {
+    if (!generatedPresentationHTML) return;
+
+    const blob = new Blob([generatedPresentationHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Improved_Presentation.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintGeneratedPresentation = () => {
+    if (!generatedPresentationHTML) return;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(generatedPresentationHTML);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -316,13 +512,29 @@ ${presentation.slides.map(slide => `
             Create and manage presentations for NABH assessors
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Icon>add</Icon>}
-          onClick={() => setIsCreateDialogOpen(true)}
-        >
-          Create Presentation
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<Icon>upload_file</Icon>}
+            onClick={() => setIsUploadDialogOpen(true)}
+          >
+            Upload Presentation
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Icon>add</Icon>}
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            Create Presentation
+          </Button>
+        </Box>
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept=".pdf,.doc,.docx,.pptx,.ppt,.png,.jpg,.jpeg"
+          onChange={handleFileUpload}
+        />
       </Box>
 
       {/* Stats */}
@@ -699,6 +911,214 @@ ${presentation.slides.map(slide => `
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Upload Presentation Dialog */}
+      <Dialog
+        open={isUploadDialogOpen}
+        onClose={resetUploadWorkflow}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{ sx: { minHeight: '70vh' } }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Icon color="primary">upload_file</Icon>
+            Upload & Improve Presentation
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {/* Stepper */}
+          <Stepper activeStep={uploadWorkflowStep} sx={{ mb: 3, pt: 2 }}>
+            {UPLOAD_WORKFLOW_STEPS.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {/* Step 0: Upload Document */}
+          {uploadWorkflowStep === 0 && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 6,
+                  border: '2px dashed',
+                  borderColor: 'primary.main',
+                  bgcolor: 'primary.50',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'primary.100' }
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Icon sx={{ fontSize: 64, color: 'primary.main' }}>cloud_upload</Icon>
+                <Typography variant="h6" sx={{ mt: 2 }}>
+                  Click to Upload Existing Presentation
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Supports PowerPoint (PPTX/PPT), PDF, Word, and Images
+                </Typography>
+              </Paper>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Upload your existing presentation to extract content and generate an improved version for NABH assessors.
+              </Typography>
+            </Box>
+          )}
+
+          {/* Step 1: Extracting */}
+          {uploadWorkflowStep === 1 && isExtractingUpload && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress size={60} />
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Extracting content from {uploadedFile?.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Analyzing slides and content...
+              </Typography>
+              <LinearProgress sx={{ mt: 3, maxWidth: 400, mx: 'auto' }} />
+            </Box>
+          )}
+
+          {/* Step 2: Review & Edit Extracted Data */}
+          {uploadWorkflowStep === 2 && (
+            <Box>
+              <Tabs value={activeUploadTab} onChange={(_, v) => setActiveUploadTab(v)} sx={{ mb: 2 }}>
+                <Tab label={`Extracted Slides (${extractedSlides.length})`} icon={<Icon>slideshow</Icon>} iconPosition="start" />
+                <Tab label="Raw Text" icon={<Icon>text_snippet</Icon>} iconPosition="start" />
+              </Tabs>
+
+              {activeUploadTab === 0 && (
+                <Box>
+                  <Paper variant="outlined" sx={{ maxHeight: 350, overflow: 'auto' }}>
+                    {extractedSlides.map((slide, i) => (
+                      <Box key={i} sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Chip label={`Slide ${i + 1}`} size="small" color="primary" />
+                          <TextField
+                            size="small"
+                            variant="standard"
+                            value={slide.title}
+                            onChange={(e) => {
+                              const updated = [...extractedSlides];
+                              updated[i].title = e.target.value;
+                              setExtractedSlides(updated);
+                            }}
+                            sx={{ flexGrow: 1 }}
+                            placeholder="Slide title"
+                          />
+                        </Box>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={3}
+                          size="small"
+                          variant="outlined"
+                          value={slide.content}
+                          onChange={(e) => {
+                            const updated = [...extractedSlides];
+                            updated[i].content = e.target.value;
+                            setExtractedSlides(updated);
+                          }}
+                        />
+                      </Box>
+                    ))}
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'warning.50' }}>
+                    <Typography variant="subtitle2" color="warning.dark" gutterBottom>
+                      <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>lightbulb</Icon>
+                      Improvement Suggestions (Optional)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={2}
+                      placeholder="Add any specific improvements (e.g., 'Add more data-driven points', 'Include quality metrics')"
+                      value={userSuggestions}
+                      onChange={(e) => setUserSuggestions(e.target.value)}
+                    />
+                  </Paper>
+                </Box>
+              )}
+
+              {activeUploadTab === 1 && (
+                <Paper variant="outlined" sx={{ p: 2, maxHeight: 400, overflow: 'auto' }}>
+                  <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                    {extractedPresentationText}
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+
+          {/* Step 3: Generated Presentation */}
+          {uploadWorkflowStep === 3 && generatedPresentationHTML && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+                <Button size="small" startIcon={<Icon>print</Icon>} onClick={handlePrintGeneratedPresentation}>
+                  Print
+                </Button>
+                <Button size="small" startIcon={<Icon>download</Icon>} onClick={handleDownloadGeneratedPresentation}>
+                  Download HTML
+                </Button>
+              </Box>
+              <Paper
+                variant="outlined"
+                sx={{ maxHeight: 500, overflow: 'auto', bgcolor: 'white' }}
+              >
+                <div dangerouslySetInnerHTML={{ __html: generatedPresentationHTML }} />
+              </Paper>
+            </Box>
+          )}
+
+          {/* Generating indicator */}
+          {isGeneratingUpload && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress size={60} />
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Generating Improved Presentation
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Creating NABH-optimized slides...
+              </Typography>
+              <LinearProgress sx={{ mt: 3, maxWidth: 400, mx: 'auto' }} />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button onClick={resetUploadWorkflow}>Cancel</Button>
+          {uploadWorkflowStep === 2 && (
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<Icon>slideshow</Icon>}
+                onClick={handleCreatePresentationFromExtracted}
+                disabled={extractedSlides.length === 0}
+              >
+                Import as Presentation
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Icon>auto_awesome</Icon>}
+                onClick={handleGenerateImprovedPresentation}
+                disabled={isGeneratingUpload}
+              >
+                Generate Improved
+              </Button>
+            </>
+          )}
+          {uploadWorkflowStep === 3 && (
+            <Button
+              variant="contained"
+              startIcon={<Icon>slideshow</Icon>}
+              onClick={handleCreatePresentationFromExtracted}
+              disabled={extractedSlides.length === 0}
+            >
+              Import & Close
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
