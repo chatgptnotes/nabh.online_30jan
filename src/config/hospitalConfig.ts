@@ -1,6 +1,6 @@
 /**
  * Hospital Configuration and Team Structure
- * Dr. Murali's Hope Hospital - NABH Accreditation Team
+ * Hope Hospital - NABH Accreditation Team
  */
 
 export interface TeamMember {
@@ -22,7 +22,7 @@ export interface HospitalInfo {
 
 // Hospital Information
 export const HOSPITAL_INFO: HospitalInfo = {
-  name: "Dr. Murali's Hope Hospital",
+  name: "Hope Hospital",
   address: '2, Teka Naka, Nagpur',
   phone: '+91-XXXX-XXXXXX',
   email: 'info@hopehospital.com',
@@ -201,7 +201,7 @@ export const ASSIGNEE_OPTIONS = NABH_TEAM.map(member => ({
 
 // Role summary for AI prompts
 export const TEAM_SUMMARY = `
-NABH Accreditation Team - Dr. Murali's Hope Hospital:
+NABH Accreditation Team - Hope Hospital:
 
 1. NABH Coordinator: Dr. Shiraz Sheikh
    - Central figure responsible for driving NABH accreditation
@@ -239,7 +239,7 @@ NABH Accreditation Team - Dr. Murali's Hope Hospital:
 // Detailed NABH Assessor Prompt for Evidence Generation
 export const NABH_ASSESSOR_PROMPT = `You are acting as a NABH assessor and quality consultant for SHCO 3rd Edition.
 
-Using the objective element description provided, generate COMPREHENSIVE, PRACTICAL, and AUDIT-READY evidences for Dr. Murali's Hope Hospital.
+Using the objective element description provided, generate COMPREHENSIVE, PRACTICAL, and AUDIT-READY evidences for Hope Hospital.
 
 KEY STAFF MEMBERS:
 - NABH Coordinator: Dr. Shiraz Sheikh

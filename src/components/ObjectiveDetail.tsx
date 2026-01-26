@@ -313,9 +313,7 @@ export default function ObjectiveDetail({
     try {
       const prompt = `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) documentation for ${HOSPITAL_INFO.name}.
 
-Generate a complete, professional, BILINGUAL (English AND Hindi) Standard Operating Procedure (SOP) document for the following NABH objective element.
-
-CRITICAL: The SOP must be in BOTH English AND Hindi throughout.
+Generate a complete, professional Standard Operating Procedure (SOP) document in ENGLISH ONLY for the following NABH objective element. This is an internal document.
 
 Hospital: ${HOSPITAL_INFO.name}
 Address: ${HOSPITAL_INFO.address}
@@ -328,52 +326,52 @@ Generate a comprehensive SOP with the following structure:
 
 ================================================================================
                               ${HOSPITAL_INFO.name.toUpperCase()}
-                    STANDARD OPERATING PROCEDURE / मानक संचालन प्रक्रिया
+                         STANDARD OPERATING PROCEDURE
 ================================================================================
 
-SOP Title / शीर्षक: [Based on objective element]
-Document No / दस्तावेज़ संख्या: SOP-${objective.code.replace(/\./g, '-')}-001
-Version / संस्करण: 1.0
-Effective Date / प्रभावी तिथि: [Today's date]
-Review Date / समीक्षा तिथि: [One year from today]
-Department / विभाग: [Relevant department]
-Page / पृष्ठ: 1 of X
+SOP Title: [Based on objective element]
+Document No: SOP-${objective.code.replace(/\./g, '-')}-001
+Version: 1.0
+Effective Date: [Today's date]
+Review Date: [One year from today]
+Department: [Relevant department]
+Page: 1 of X
 
 --------------------------------------------------------------------------------
 
-1. PURPOSE / उद्देश्य
-[Explain the purpose in both English and Hindi]
+1. PURPOSE
+[Explain the purpose clearly]
 
-2. SCOPE / दायरा
-[Define the scope in both English and Hindi]
+2. SCOPE
+[Define the scope of this SOP]
 
-3. DEFINITIONS / परिभाषाएं
-[List key terms with definitions in both languages]
+3. DEFINITIONS
+[List key terms with definitions]
 
-4. RESPONSIBILITIES / जिम्मेदारियां
-[Define roles and responsibilities in both languages]
+4. RESPONSIBILITIES
+[Define roles and responsibilities]
 
-5. PROCEDURE / प्रक्रिया
-[Step-by-step procedure in both languages]
+5. PROCEDURE
+[Step-by-step procedure with detailed instructions]
 
-6. DOCUMENTATION / दस्तावेज़ीकरण
-[Required documentation and records in both languages]
+6. DOCUMENTATION
+[Required documentation and records]
 
-7. REFERENCES / संदर्भ
+7. REFERENCES
 - NABH Standards
 - Hospital Policies
 - Relevant Guidelines
 
-8. ATTACHMENTS / संलग्नक
+8. ATTACHMENTS
 [List any forms, checklists, or annexures]
 
 ================================================================================
-PREPARED BY / तैयारकर्ता:         REVIEWED BY / समीक्षाकर्ता:      APPROVED BY / अनुमोदनकर्ता:
+PREPARED BY:                   REVIEWED BY:                   APPROVED BY:
 _____________________          _____________________          _____________________
-Name / नाम:                    Name / नाम:                    Name / नाम:
-Designation / पदनाम:           Designation / पदनाम:           Designation / पदनाम:
-Date / तिथि:                   Date / तिथि:                   Date / तिथि:
-Signature / हस्ताक्षर:          Signature / हस्ताक्षर:          Signature / हस्ताक्षर:
+Name:                          Name:                          Name:
+Designation:                   Designation:                   Designation:
+Date:                          Date:                          Date:
+Signature:                     Signature:                     Signature:
 ================================================================================`;
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -433,7 +431,7 @@ Signature / हस्ताक्षर:          Signature / हस्ताक
     setGeneratedNotice('');
 
     try {
-      const prompt = `Generate a professional BILINGUAL (English AND Hindi) training notice/announcement for ${HOSPITAL_INFO.name}.
+      const prompt = `Generate a professional training notice/announcement in ENGLISH ONLY for ${HOSPITAL_INFO.name}. This is an internal document.
 
 Hospital: ${HOSPITAL_INFO.name}
 Address: ${HOSPITAL_INFO.address}
@@ -453,28 +451,28 @@ Generate a formal notice on hospital letterhead format with the following struct
                          ${HOSPITAL_INFO.address}
 ================================================================================
 
-                    TRAINING NOTICE / प्रशिक्षण सूचना
-                    --------------------------------
+                              TRAINING NOTICE
+                              ---------------
 
 Reference No: TRN/${objective.code.replace(/\./g, '/')}/${new Date().getFullYear()}
 Date: [Current Date]
 
-To: All Concerned Staff / सभी संबंधित कर्मचारी
+To: All Concerned Staff
 
-Subject: Training on [Topic] / विषय: [Topic in Hindi] पर प्रशिक्षण
+Subject: Training on [Topic]
 
-[Body of notice in both English and Hindi explaining the training, its importance, who should attend, what to bring, etc.]
+[Body of notice explaining the training, its importance, who should attend, what to bring, etc.]
 
-TRAINING DETAILS / प्रशिक्षण विवरण:
-- Date / तिथि: ${trainingDate}
-- Time / समय: ${trainingTime || 'To be announced'}
-- Venue / स्थान: ${trainingVenue || 'Hospital Conference Room'}
-- Trainer / प्रशिक्षक: ${trainerName}, ${trainerDesignation || 'Trainer'}
+TRAINING DETAILS:
+- Date: ${trainingDate}
+- Time: ${trainingTime || 'To be announced'}
+- Venue: ${trainingVenue || 'Hospital Conference Room'}
+- Trainer: ${trainerName}, ${trainerDesignation || 'Trainer'}
 
-[Attendance is mandatory / उपस्थिति अनिवार्य है]
+Attendance is mandatory.
 
 ================================================================================
-Issued by / जारीकर्ता:
+Issued by:
 [Quality Coordinator Name]
 Quality Coordinator
 ${HOSPITAL_INFO.name}
@@ -520,7 +518,7 @@ ${HOSPITAL_INFO.name}
     setGeneratedAttendance('');
 
     try {
-      const prompt = `Generate a BILINGUAL (English AND Hindi) training attendance sheet for ${HOSPITAL_INFO.name}.
+      const prompt = `Generate a training attendance sheet in ENGLISH ONLY for ${HOSPITAL_INFO.name}. This is an internal document.
 
 Hospital: ${HOSPITAL_INFO.name}
 Training Topic: ${objective.title} (${objective.code})
@@ -531,34 +529,33 @@ Create a professional attendance sheet with:
 
 ================================================================================
                               ${HOSPITAL_INFO.name.toUpperCase()}
-                    TRAINING ATTENDANCE SHEET / प्रशिक्षण उपस्थिति पत्रक
+                         TRAINING ATTENDANCE SHEET
 ================================================================================
 
-Training Topic / प्रशिक्षण विषय: ${objective.title}
-NABH Code / NABH कोड: ${objective.code}
-Date / तिथि: ${trainingDate || '_____________'}
-Time / समय: ${trainingTime || '_____________'}
-Venue / स्थान: ${trainingVenue || '_____________'}
-Trainer Name / प्रशिक्षक का नाम: ${trainerName || '_____________'}
-Trainer Designation / पदनाम: ${trainerDesignation || '_____________'}
+Training Topic: ${objective.title}
+NABH Code: ${objective.code}
+Date: ${trainingDate || '_____________'}
+Time: ${trainingTime || '_____________'}
+Venue: ${trainingVenue || '_____________'}
+Trainer Name: ${trainerName || '_____________'}
+Trainer Designation: ${trainerDesignation || '_____________'}
 
 --------------------------------------------------------------------------------
-S.No | Name / नाम | Designation / पदनाम | Department / विभाग | Signature / हस्ताक्षर
+S.No | Name           | Designation      | Department       | Signature
 --------------------------------------------------------------------------------
-1    |            |                     |                    |
-2    |            |                     |                    |
-3    |            |                     |                    |
+1    |                |                  |                  |
+2    |                |                  |                  |
+3    |                |                  |                  |
 [Continue for 20 rows]
 
 --------------------------------------------------------------------------------
-Total Attendees / कुल उपस्थित: ___________
+Total Attendees: ___________
 
-TRAINER'S CERTIFICATION / प्रशिक्षक प्रमाणन:
+TRAINER'S CERTIFICATION:
 I certify that the above training was conducted as per schedule.
-मैं प्रमाणित करता/करती हूं कि उपरोक्त प्रशिक्षण निर्धारित समय पर आयोजित किया गया।
 
-Trainer Signature / प्रशिक्षक हस्ताक्षर: _____________________
-Date / तिथि: _____________________
+Trainer Signature: _____________________
+Date: _____________________
 
 ================================================================================`;
 
@@ -602,7 +599,7 @@ Date / तिथि: _____________________
     setGeneratedMCQ('');
 
     try {
-      const prompt = `Generate a BILINGUAL (English AND Hindi) Multiple Choice Question (MCQ) test for training evaluation at ${HOSPITAL_INFO.name}.
+      const prompt = `Generate a Multiple Choice Question (MCQ) test in ENGLISH ONLY for training evaluation at ${HOSPITAL_INFO.name}. This is an internal document.
 
 Hospital: ${HOSPITAL_INFO.name}
 Training Topic: ${objective.title}
@@ -615,50 +612,49 @@ Format:
 
 ================================================================================
                               ${HOSPITAL_INFO.name.toUpperCase()}
-              TRAINING EVALUATION TEST / प्रशिक्षण मूल्यांकन परीक्षा
+                         TRAINING EVALUATION TEST
 ================================================================================
 
-Topic / विषय: ${objective.title}
-NABH Code / NABH कोड: ${objective.code}
-Total Questions / कुल प्रश्न: ${mcqQuestionCount}
-Time / समय: 15 minutes / 15 मिनट
-Total Marks / कुल अंक: ${mcqQuestionCount}
+Topic: ${objective.title}
+NABH Code: ${objective.code}
+Total Questions: ${mcqQuestionCount}
+Time: 15 minutes
+Total Marks: ${mcqQuestionCount}
 
-Name / नाम: _____________________
-Designation / पदनाम: _____________________
-Department / विभाग: _____________________
-Date / तिथि: _____________________
+Name: _____________________
+Designation: _____________________
+Department: _____________________
+Date: _____________________
 
-INSTRUCTIONS / निर्देश:
-- Circle the correct answer / सही उत्तर पर गोला लगाएं
-- Each question carries 1 mark / प्रत्येक प्रश्न 1 अंक का है
-- All questions are compulsory / सभी प्रश्न अनिवार्य हैं
+INSTRUCTIONS:
+- Circle the correct answer
+- Each question carries 1 mark
+- All questions are compulsory
 
 --------------------------------------------------------------------------------
 
-[Generate ${mcqQuestionCount} MCQ questions with 4 options each, in both English and Hindi]
+[Generate ${mcqQuestionCount} MCQ questions with 4 options each]
 
-Q1. [Question in English]
-    [Question in Hindi]
-    a) Option A / विकल्प A
-    b) Option B / विकल्प B
-    c) Option C / विकल्प C
-    d) Option D / विकल्प D
+Q1. [Question]
+    a) Option A
+    b) Option B
+    c) Option C
+    d) Option D
 
 [Continue for all questions]
 
 --------------------------------------------------------------------------------
-FOR OFFICIAL USE ONLY / केवल आधिकारिक उपयोग के लिए
+FOR OFFICIAL USE ONLY
 
-Total Score / कुल अंक: _____ / ${mcqQuestionCount}
-Percentage / प्रतिशत: _____%
-Result / परिणाम: PASS / FAIL (Passing: 70%)
+Total Score: _____ / ${mcqQuestionCount}
+Percentage: _____%
+Result: PASS / FAIL (Passing: 70%)
 
-Evaluator Signature / मूल्यांकनकर्ता हस्ताक्षर: _____________________
+Evaluator Signature: _____________________
 
 ================================================================================
 
-ANSWER KEY / उत्तर कुंजी (Keep Separately):
+ANSWER KEY (Keep Separately):
 [List all correct answers]
 ================================================================================`;
 
@@ -694,6 +690,67 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
   const handleCopyContent = (content: string, label: string) => {
     navigator.clipboard.writeText(content);
     alert(`${label} copied to clipboard!`);
+  };
+
+  // Print content handler
+  const handlePrintContent = (content: string, title: string) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${title} - ${HOSPITAL_INFO.name}</title>
+            <style>
+              body {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.5;
+                padding: 20px;
+                white-space: pre-wrap;
+              }
+              @media print {
+                body { margin: 0; padding: 15px; }
+              }
+            </style>
+          </head>
+          <body>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  // Download as PDF handler (uses print to PDF)
+  const handleDownloadPDF = (content: string, filename: string) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${filename}</title>
+            <style>
+              body {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.5;
+                padding: 20px;
+                white-space: pre-wrap;
+              }
+              @page { margin: 1cm; }
+            </style>
+          </head>
+          <body>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      // Trigger print dialog - user can save as PDF
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1138,9 +1195,15 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle2" fontWeight={600}>
                       <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>campaign</Icon>
-                      Training Notice (Bilingual)
+                      Training Notice
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" startIcon={<Icon>print</Icon>} onClick={() => handlePrintContent(generatedNotice, 'Training Notice')}>
+                        Print
+                      </Button>
+                      <Button size="small" startIcon={<Icon>download</Icon>} onClick={() => handleDownloadPDF(generatedNotice, 'Training-Notice')}>
+                        PDF
+                      </Button>
                       <Button size="small" startIcon={<Icon>content_copy</Icon>} onClick={() => handleCopyContent(generatedNotice, 'Training Notice')}>
                         Copy
                       </Button>
@@ -1149,9 +1212,15 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
                       </Button>
                     </Box>
                   </Box>
-                  <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                    {generatedNotice}
-                  </Box>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={10}
+                    maxRows={20}
+                    value={generatedNotice}
+                    onChange={(e) => setGeneratedNotice(e.target.value)}
+                    sx={{ bgcolor: 'background.paper', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  />
                 </Card>
               )}
 
@@ -1161,9 +1230,15 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle2" fontWeight={600}>
                       <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>people</Icon>
-                      Attendance Sheet (Bilingual)
+                      Attendance Sheet
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" startIcon={<Icon>print</Icon>} onClick={() => handlePrintContent(generatedAttendance, 'Attendance Sheet')}>
+                        Print
+                      </Button>
+                      <Button size="small" startIcon={<Icon>download</Icon>} onClick={() => handleDownloadPDF(generatedAttendance, 'Attendance-Sheet')}>
+                        PDF
+                      </Button>
                       <Button size="small" startIcon={<Icon>content_copy</Icon>} onClick={() => handleCopyContent(generatedAttendance, 'Attendance Sheet')}>
                         Copy
                       </Button>
@@ -1172,9 +1247,15 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
                       </Button>
                     </Box>
                   </Box>
-                  <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                    {generatedAttendance}
-                  </Box>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={10}
+                    maxRows={20}
+                    value={generatedAttendance}
+                    onChange={(e) => setGeneratedAttendance(e.target.value)}
+                    sx={{ bgcolor: 'background.paper', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  />
                 </Card>
               )}
 
@@ -1184,9 +1265,15 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle2" fontWeight={600}>
                       <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>quiz</Icon>
-                      MCQ Evaluation Test (Bilingual)
+                      MCQ Evaluation Test
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" startIcon={<Icon>print</Icon>} onClick={() => handlePrintContent(generatedMCQ, 'MCQ Evaluation Test')}>
+                        Print
+                      </Button>
+                      <Button size="small" startIcon={<Icon>download</Icon>} onClick={() => handleDownloadPDF(generatedMCQ, 'MCQ-Evaluation-Test')}>
+                        PDF
+                      </Button>
                       <Button size="small" startIcon={<Icon>content_copy</Icon>} onClick={() => handleCopyContent(generatedMCQ, 'MCQ Test')}>
                         Copy
                       </Button>
@@ -1200,9 +1287,15 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
                       The answer key is included at the end. Keep it separate from the test paper.
                     </Typography>
                   </Alert>
-                  <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 400, overflow: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                    {generatedMCQ}
-                  </Box>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={15}
+                    maxRows={25}
+                    value={generatedMCQ}
+                    onChange={(e) => setGeneratedMCQ(e.target.value)}
+                    sx={{ bgcolor: 'background.paper', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  />
                 </Card>
               )}
             </AccordionDetails>
@@ -1585,48 +1678,37 @@ ANSWER KEY / उत्तर कुंजी (Keep Separately):
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="subtitle2" fontWeight={600}>
                         <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>auto_awesome</Icon>
-                        Generated SOP (Bilingual)
+                        Generated SOP
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          size="small"
-                          startIcon={<Icon>content_copy</Icon>}
-                          onClick={handleCopyGeneratedSOP}
-                        >
+                        <Button size="small" startIcon={<Icon>print</Icon>} onClick={() => handlePrintContent(generatedSOPContent, 'SOP')}>
+                          Print
+                        </Button>
+                        <Button size="small" startIcon={<Icon>download</Icon>} onClick={() => handleDownloadPDF(generatedSOPContent, `SOP-${objective.code}`)}>
+                          PDF
+                        </Button>
+                        <Button size="small" startIcon={<Icon>content_copy</Icon>} onClick={handleCopyGeneratedSOP}>
                           Copy
                         </Button>
-                        <Button
-                          size="small"
-                          color="error"
-                          startIcon={<Icon>close</Icon>}
-                          onClick={() => setGeneratedSOPContent('')}
-                        >
+                        <Button size="small" color="error" startIcon={<Icon>close</Icon>} onClick={() => setGeneratedSOPContent('')}>
                           Close
                         </Button>
                       </Box>
                     </Box>
                     <Alert severity="info" sx={{ mb: 2 }}>
                       <Typography variant="body2">
-                        Review and customize the generated SOP. Copy the content and paste it into a Word document for final formatting.
+                        Edit the SOP below as needed. Use Print or PDF to save, or Copy to paste into Word.
                       </Typography>
                     </Alert>
-                    <Box
-                      sx={{
-                        p: 2,
-                        bgcolor: 'background.paper',
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        maxHeight: 400,
-                        overflow: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        fontFamily: 'monospace',
-                        fontSize: '0.8rem',
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {generatedSOPContent}
-                    </Box>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={15}
+                      maxRows={25}
+                      value={generatedSOPContent}
+                      onChange={(e) => setGeneratedSOPContent(e.target.value)}
+                      sx={{ bgcolor: 'background.paper', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                    />
                   </Card>
                 )}
               </Box>

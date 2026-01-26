@@ -76,71 +76,66 @@ const defaultListPrompt = NABH_ASSESSOR_PROMPT;
 
 const getContentPrompt = (config: HospitalConfig) => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for ${config.name}.
 
-Generate detailed, ready-to-use BILINGUAL (English and Hindi) evidence content/template for the selected evidence item.
-
-CRITICAL: ALL content must be BILINGUAL - provide both English AND Hindi text throughout the document. For every section, heading, and content, include both languages.
+Generate detailed, ready-to-use evidence content/template for the selected evidence item in ENGLISH ONLY (these are internal documents).
 
 IMPORTANT: Every document MUST include the following structure:
 
 ================================================================================
-                              DOCUMENT HEADER / दस्तावेज़ शीर्षक
+                              DOCUMENT HEADER
 ================================================================================
-                         [HOSPITAL LOGO PLACEHOLDER / अस्पताल लोगो]
+                         [HOSPITAL LOGO PLACEHOLDER]
 
                               ${config.name.toUpperCase()}
 ================================================================================
 
-[Document Title in English]
-[दस्तावेज़ शीर्षक हिंदी में]
+[Document Title]
 --------------------------------------------------------------------------------
-Document No / दस्तावेज़ संख्या: [DOC-XXX-001]  |  Version / संस्करण: 1.0  |  Page / पृष्ठ: 1 of X
-Effective Date / प्रभावी तिथि: [DD/MM/YYYY]    |  Review Date / समीक्षा तिथि: [DD/MM/YYYY]
-Department / विभाग: [Department Name]          |  Category / श्रेणी: [Policy/SOP/Register/Record]
+Document No: [DOC-XXX-001]  |  Version: 1.0  |  Page: 1 of X
+Effective Date: [DD/MM/YYYY]    |  Review Date: [DD/MM/YYYY]
+Department: [Department Name]   |  Category: [Policy/SOP/Register/Record]
 --------------------------------------------------------------------------------
 
-[MAIN CONTENT - BILINGUAL / मुख्य सामग्री - द्विभाषी]
+[MAIN CONTENT]
 
 The content should be:
 1. Professional and compliant with NABH standards
-2. BILINGUAL - Every heading, instruction, and content in both English and Hindi
+2. In English only (internal documentation)
 3. Ready to be customized with hospital-specific details
 4. Include all necessary sections, fields, and formatting
 
-If it's a policy or SOP, include (in both languages):
-- Purpose / उद्देश्य
-- Scope / दायरा
-- Definitions / परिभाषाएं
-- Procedure/Policy statements with numbered steps / प्रक्रिया/नीति विवरण
-- Responsibilities matrix / जिम्मेदारियां
-- References to NABH standards / NABH मानक संदर्भ
-- Related documents / संबंधित दस्तावेज़
+If it's a policy or SOP, include:
+- Purpose
+- Scope
+- Definitions
+- Procedure/Policy statements with numbered steps
+- Responsibilities matrix
+- References to NABH standards
+- Related documents
 
 If it's a register or record format, include:
-- Column headers in both languages
-- Sample entries in both languages
-- Instructions for filling in both languages
+- Column headers
+- Sample entries
+- Instructions for filling
 
 ================================================================================
-                    DOCUMENT FOOTER / दस्तावेज़ पादलेख
+                              DOCUMENT FOOTER
 ================================================================================
 
-PREPARED BY / तैयारकर्ता:       REVIEWED BY / समीक्षाकर्ता:     APPROVED BY / अनुमोदनकर्ता:
+PREPARED BY:                    REVIEWED BY:                   APPROVED BY:
 _____________________          _____________________          _____________________
-Name / नाम:                    Name / नाम:                    Name / नाम: ${config.qualityCoordinator}
-Designation / पदनाम:           Designation / पदनाम:           Designation / पदनाम: ${config.qualityCoordinatorDesignation}
-Date / तिथि:                   Date / तिथि:                   Date / तिथि:
-Signature / हस्ताक्षर:          Signature / हस्ताक्षर:          Digital Signature / डिजिटल हस्ताक्षर: [SIGNED]
+Name:                          Name:                          Name: ${config.qualityCoordinator}
+Designation:                   Designation:                   Designation: ${config.qualityCoordinatorDesignation}
+Date:                          Date:                          Date:
+Signature:                     Signature:                     Digital Signature: [SIGNED]
 
 --------------------------------------------------------------------------------
-                         [HOSPITAL STAMP / अस्पताल मुहर]
+                         [HOSPITAL STAMP]
 
         This is an official document of ${config.name}.
-        यह ${config.name} का आधिकारिक दस्तावेज़ है।
         Unauthorized reproduction or distribution is prohibited.
-        अनधिकृत प्रतिलिपि या वितरण निषेध है।
 --------------------------------------------------------------------------------
 ${config.name} | ${config.address}
-Phone / फोन: ${config.phone} | Email / ईमेल: ${config.email} | Website / वेबसाइट: ${config.website}
+Phone: ${config.phone} | Email: ${config.email} | Website: ${config.website}
 ================================================================================`;
 
 // Visual evidence types for image generation
@@ -436,7 +431,7 @@ export default function AIEvidenceGenerator() {
         const content = await callClaudeText(
           apiKey,
           contentPrompt,
-          `Objective Element: ${description}\n\nEvidence Item to Generate:\n${item.text}\n\nGenerate complete, ready-to-use BILINGUAL (English AND Hindi) content/template for this evidence with the hospital header, footer, signature and stamp sections as specified. IMPORTANT: All content must be in both English and Hindi languages throughout the document.`
+          `Objective Element: ${description}\n\nEvidence Item to Generate:\n${item.text}\n\nGenerate complete, ready-to-use content/template for this evidence in ENGLISH ONLY (internal document) with the hospital header, footer, signature and stamp sections as specified.`
         );
 
         contents.push({
