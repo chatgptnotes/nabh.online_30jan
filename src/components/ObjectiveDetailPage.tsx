@@ -853,6 +853,86 @@ Generate the complete HTML with all sections filled in appropriately based on th
 </html>`;
   };
 
+  // Post-process HTML to ensure correct branding, dates, and signatures
+  const postProcessHTML = (html: string): string => {
+    let processed = html;
+
+    // Replace any logo placeholder with actual logo
+    processed = processed.replace(
+      /<div class="logo-area">[\s\S]*?<\/div>/gi,
+      `<img src="${logoUrl}" alt="Dr. Murali's Hope Hospital" class="logo" style="width: 180px; height: auto; margin: 0 auto 10px; display: block;" onerror="this.style.display='none'">`
+    );
+
+    // Replace "HOSPITAL<br>LOGO" or similar placeholders
+    processed = processed.replace(
+      /HOSPITAL\s*(<br\s*\/?>)?\s*LOGO/gi,
+      `<img src="${logoUrl}" alt="Dr. Murali's Hope Hospital" style="width: 180px; height: auto;">`
+    );
+
+    // Replace "Hope Hospital" with "Dr. Murali's Hope Hospital"
+    processed = processed.replace(/(?<!Dr\. Murali's )Hope Hospital/g, "Dr. Murali's Hope Hospital");
+
+    // Fix dates - replace empty or placeholder dates
+    processed = processed.replace(/Date:\s*<\/div>/gi, `Date: ${effectiveDate}</div>`);
+    processed = processed.replace(/Date:\s*$/gm, `Date: ${effectiveDate}`);
+    processed = processed.replace(/\[DD\/MM\/YYYY\]/g, effectiveDate);
+    processed = processed.replace(/\[Date\]/g, effectiveDate);
+
+    // Fix effective and review dates in tables
+    processed = processed.replace(
+      /<td>(\s*)(\[?Effective Date\]?|DD\/MM\/YYYY)(\s*)<\/td>/gi,
+      `<td>${effectiveDate}</td>`
+    );
+    processed = processed.replace(
+      /Effective Date<\/th><td>[^<]*<\/td>/gi,
+      `Effective Date</th><td>${effectiveDate}</td>`
+    );
+    processed = processed.replace(
+      /Review Date<\/th><td>[^<]*<\/td>/gi,
+      `Review Date</th><td>${reviewDate}</td>`
+    );
+
+    // Fix signature sections - replace generic names with actual staff
+    // Prepared By - Jagruti
+    processed = processed.replace(
+      /Name:\s*(Quality Manager|Quality Officer|Staff|Prepared By Staff|\[Name\])?(\s*<br|\s*$)/gi,
+      `Name: Jagruti$2`
+    );
+    processed = processed.replace(
+      /Designation:\s*(Quality Officer|Staff|\[Designation\])?(\s*<br|\s*$)/gi,
+      `Designation: Quality Manager / HR$2`
+    );
+
+    // Add signature lines if missing
+    processed = processed.replace(
+      /Signature:\s*<\/td>/gi,
+      `Signature: <div style="font-family: 'Brush Script MT', cursive; font-size: 16px; color: #0D47A1; margin-top: 5px;">Sd/-</div></td>`
+    );
+
+    // Ensure Dr. Shiraz Sheikh is in Approved By
+    if (!processed.includes('Dr. Shiraz Sheikh') && processed.includes('APPROVED BY')) {
+      processed = processed.replace(
+        /APPROVED BY<\/th>[\s\S]*?<td>([\s\S]*?)<\/td>/i,
+        `APPROVED BY</th></tr><tr><td style="text-align: center; padding: 15px;">
+          <div><strong>Dr. Shiraz Sheikh</strong></div>
+          <div>NABH Coordinator / Administrator</div>
+          <div>Date: ${effectiveDate}</div>
+          <div style="font-family: 'Brush Script MT', cursive; font-size: 18px; color: #0D47A1; margin-top: 8px;">Dr. Shiraz Sheikh</div>
+        </td>`
+      );
+    }
+
+    // Add tagline if missing
+    if (!processed.includes('Assured | Committed | Proficient')) {
+      processed = processed.replace(
+        /(<div class="hospital-address">)/i,
+        `<div class="tagline" style="font-size: 11px; color: #666; font-style: italic; margin-bottom: 5px;">Assured | Committed | Proficient</div>$1`
+      );
+    }
+
+    return processed;
+  };
+
   // Extract editable text from HTML content
   const extractTextFromHTML = (html: string): string => {
     const tempDiv = document.createElement('div');
@@ -965,8 +1045,9 @@ Generate complete, ready-to-use content/template for this evidence in ENGLISH ON
         }
 
         if (rawContent) {
-          // Extract clean HTML from response
-          const htmlContent = extractHTMLFromResponse(rawContent);
+          // Extract clean HTML from response and post-process it
+          const extractedHtml = extractHTMLFromResponse(rawContent);
+          const htmlContent = postProcessHTML(extractedHtml);
 
           // Extract title from the evidence item
           const title = item.text.replace(/^\d+[.):]\s*/, '').substring(0, 100);
