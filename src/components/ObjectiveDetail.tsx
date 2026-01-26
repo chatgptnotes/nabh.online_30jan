@@ -322,57 +322,92 @@ NABH Objective Element Code: ${objective.code}
 Title: ${objective.title}
 Description: ${objective.description}
 
-Generate a comprehensive SOP with the following structure:
+Generate a comprehensive SOP with the following professional table-based structure:
 
-================================================================================
-                              ${HOSPITAL_INFO.name.toUpperCase()}
-                         STANDARD OPERATING PROCEDURE
-================================================================================
-
-SOP Title: [Based on objective element]
-Document No: SOP-${objective.code.replace(/\./g, '-')}-001
-Version: 1.0
-Effective Date: [Today's date]
-Review Date: [One year from today]
-Department: [Relevant department]
-Page: 1 of X
-
---------------------------------------------------------------------------------
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                 │
+│                        ╔═══════════════════════════╗                           │
+│                        ║    [HOSPITAL LOGO]        ║                           │
+│                        ║      (Large Size)         ║                           │
+│                        ╚═══════════════════════════╝                           │
+│                                                                                 │
+│                            ${HOSPITAL_INFO.name.toUpperCase()}                            │
+│                              ${HOSPITAL_INFO.address}                                │
+│                                                                                 │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                      STANDARD OPERATING PROCEDURE                               │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ SOP TITLE: [Based on objective element - ${objective.title}]                   │
+├──────────────────────┬──────────────────────┬───────────────────────────────────┤
+│ Document No:         │ Version:             │ Page: 1 of X                      │
+│ SOP-${objective.code.replace(/\./g, '-')}-001      │ 1.0                  │                                   │
+├──────────────────────┼──────────────────────┼───────────────────────────────────┤
+│ Department:          │ NABH Chapter:        │ Category:                         │
+│ [Relevant Dept]      │ ${objective.code}              │ Standard Operating Procedure      │
+├──────────────────────┼──────────────────────┼───────────────────────────────────┤
+│ Effective Date:      │ Review Date:         │ Supersedes:                       │
+│ [DD/MM/YYYY]         │ [DD/MM/YYYY]         │ New Document                      │
+├──────────────────────┴──────────────────────┴───────────────────────────────────┤
+│ DOCUMENT AUTHORIZATION                                                          │
+├──────────────────────┬──────────────────────┬───────────────────────────────────┤
+│ PREPARED BY          │ REVIEWED BY          │ APPROVED BY                       │
+├──────────────────────┼──────────────────────┼───────────────────────────────────┤
+│ Name:                │ Name:                │ Name:                             │
+│ Designation:         │ Designation:         │ Designation:                      │
+│ Date:                │ Date:                │ Date:                             │
+│ Signature:           │ Signature:           │ Signature:                        │
+└──────────────────────┴──────────────────────┴───────────────────────────────────┘
 
 1. PURPOSE
-[Explain the purpose clearly]
+   [Clearly explain the purpose of this SOP]
 
 2. SCOPE
-[Define the scope of this SOP]
+   [Define who, what, when, where this SOP applies]
 
 3. DEFINITIONS
-[List key terms with definitions]
+   [List key terms and their definitions in a table format]
+   ┌────────────────────┬──────────────────────────────────────────────────────────┐
+   │ Term               │ Definition                                               │
+   ├────────────────────┼──────────────────────────────────────────────────────────┤
+   │ [Term 1]           │ [Definition]                                             │
+   └────────────────────┴──────────────────────────────────────────────────────────┘
 
 4. RESPONSIBILITIES
-[Define roles and responsibilities]
+   ┌────────────────────┬──────────────────────────────────────────────────────────┐
+   │ Role               │ Responsibility                                           │
+   ├────────────────────┼──────────────────────────────────────────────────────────┤
+   │ [Role 1]           │ [Responsibilities]                                       │
+   │ [Role 2]           │ [Responsibilities]                                       │
+   └────────────────────┴──────────────────────────────────────────────────────────┘
 
 5. PROCEDURE
-[Step-by-step procedure with detailed instructions]
+   5.1 [Step 1 with detailed instructions]
+   5.2 [Step 2 with detailed instructions]
+   5.3 [Continue with all steps]
 
-6. DOCUMENTATION
-[Required documentation and records]
+6. DOCUMENTATION REQUIREMENTS
+   [List all required documents, forms, and records]
 
 7. REFERENCES
-- NABH Standards
-- Hospital Policies
-- Relevant Guidelines
+   - NABH SHCO 3rd Edition Standards
+   - Hospital Policies
+   - Relevant Guidelines
 
-8. ATTACHMENTS
-[List any forms, checklists, or annexures]
+8. ATTACHMENTS/ANNEXURES
+   [List any forms, checklists, or annexures]
 
-================================================================================
-PREPARED BY:                   REVIEWED BY:                   APPROVED BY:
-_____________________          _____________________          _____________________
-Name:                          Name:                          Name:
-Designation:                   Designation:                   Designation:
-Date:                          Date:                          Date:
-Signature:                     Signature:                     Signature:
-================================================================================`;
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ REVISION HISTORY                                                                │
+├──────────┬────────────┬─────────────────────────────────┬───────────────────────┤
+│ Version  │ Date       │ Description of Changes          │ Changed By            │
+├──────────┼────────────┼─────────────────────────────────┼───────────────────────┤
+│ 1.0      │ [Date]     │ Initial Release                 │ [Name]                │
+└──────────┴────────────┴─────────────────────────────────┴───────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ ${HOSPITAL_INFO.name} | ${HOSPITAL_INFO.address}                                     │
+│ This is a controlled document. Unauthorized copying or distribution prohibited.│
+└─────────────────────────────────────────────────────────────────────────────────┘`;
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',

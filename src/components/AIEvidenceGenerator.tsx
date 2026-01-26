@@ -78,65 +78,83 @@ const getContentPrompt = (config: HospitalConfig) => `You are an expert in NABH 
 
 Generate detailed, ready-to-use evidence content/template for the selected evidence item in ENGLISH ONLY (these are internal documents).
 
-IMPORTANT: Every document MUST include the following structure:
+IMPORTANT: Every document MUST include the following professional table-based structure:
 
-================================================================================
-                              DOCUMENT HEADER
-================================================================================
-                         [HOSPITAL LOGO PLACEHOLDER]
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                 │
+│                        ╔═══════════════════════════╗                           │
+│                        ║    [HOSPITAL LOGO]        ║                           │
+│                        ║      (Large Size)         ║                           │
+│                        ╚═══════════════════════════╝                           │
+│                                                                                 │
+│                            ${config.name.toUpperCase()}                              │
+│                              ${config.address}                                  │
+│                                                                                 │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                              [DOCUMENT TITLE]                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ DOCUMENT CONTROL INFORMATION                                                    │
+├──────────────────────┬──────────────────────┬───────────────────────────────────┤
+│ Document No:         │ Version:             │ Page: 1 of X                      │
+│ [DOC-XXX-001]        │ 1.0                  │                                   │
+├──────────────────────┼──────────────────────┼───────────────────────────────────┤
+│ Department:          │ Category:            │ NABH Chapter:                     │
+│ [Department Name]    │ [Policy/SOP/Record]  │ [Chapter Code]                    │
+├──────────────────────┼──────────────────────┼───────────────────────────────────┤
+│ Effective Date:      │ Review Date:         │ Supersedes:                       │
+│ [DD/MM/YYYY]         │ [DD/MM/YYYY]         │ [Previous Version if any]         │
+├──────────────────────┴──────────────────────┴───────────────────────────────────┤
+│ DOCUMENT AUTHORIZATION                                                          │
+├──────────────────────┬──────────────────────┬───────────────────────────────────┤
+│ PREPARED BY          │ REVIEWED BY          │ APPROVED BY                       │
+├──────────────────────┼──────────────────────┼───────────────────────────────────┤
+│ Name:                │ Name:                │ Name: ${config.qualityCoordinator}        │
+│ Designation:         │ Designation:         │ Designation: ${config.qualityCoordinatorDesignation} │
+│ Date:                │ Date:                │ Date:                             │
+│ Signature:           │ Signature:           │ Signature:                        │
+└──────────────────────┴──────────────────────┴───────────────────────────────────┘
 
-                              ${config.name.toUpperCase()}
-================================================================================
-
-[Document Title]
---------------------------------------------------------------------------------
-Document No: [DOC-XXX-001]  |  Version: 1.0  |  Page: 1 of X
-Effective Date: [DD/MM/YYYY]    |  Review Date: [DD/MM/YYYY]
-Department: [Department Name]   |  Category: [Policy/SOP/Register/Record]
---------------------------------------------------------------------------------
-
-[MAIN CONTENT]
+[MAIN CONTENT SECTION]
 
 The content should be:
 1. Professional and compliant with NABH standards
 2. In English only (internal documentation)
 3. Ready to be customized with hospital-specific details
-4. Include all necessary sections, fields, and formatting
+4. Well-structured with clear headings and numbered sections
 
 If it's a policy or SOP, include:
-- Purpose
-- Scope
-- Definitions
-- Procedure/Policy statements with numbered steps
-- Responsibilities matrix
-- References to NABH standards
-- Related documents
+1. PURPOSE
+2. SCOPE
+3. DEFINITIONS
+4. RESPONSIBILITIES (in table format)
+5. PROCEDURE (numbered steps)
+6. DOCUMENTATION REQUIREMENTS
+7. REFERENCES
+8. REVISION HISTORY
 
 If it's a register or record format, include:
-- Column headers
+- Clear column headers in table format
 - Sample entries
 - Instructions for filling
 
-================================================================================
-                              DOCUMENT FOOTER
-================================================================================
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ REVISION HISTORY                                                                │
+├──────────┬────────────┬─────────────────────────────────┬───────────────────────┤
+│ Version  │ Date       │ Description of Changes          │ Changed By            │
+├──────────┼────────────┼─────────────────────────────────┼───────────────────────┤
+│ 1.0      │ [Date]     │ Initial Release                 │ [Name]                │
+└──────────┴────────────┴─────────────────────────────────┴───────────────────────┘
 
-PREPARED BY:                    REVIEWED BY:                   APPROVED BY:
-_____________________          _____________________          _____________________
-Name:                          Name:                          Name: ${config.qualityCoordinator}
-Designation:                   Designation:                   Designation: ${config.qualityCoordinatorDesignation}
-Date:                          Date:                          Date:
-Signature:                     Signature:                     Digital Signature: [SIGNED]
-
---------------------------------------------------------------------------------
-                         [HOSPITAL STAMP]
-
-        This is an official document of ${config.name}.
-        Unauthorized reproduction or distribution is prohibited.
---------------------------------------------------------------------------------
-${config.name} | ${config.address}
-Phone: ${config.phone} | Email: ${config.email} | Website: ${config.website}
-================================================================================`;
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              DOCUMENT FOOTER                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ ${config.name} | ${config.address}                              │
+│ Phone: ${config.phone} | Email: ${config.email}                                │
+│ Website: ${config.website}                                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ This is a controlled document. Unauthorized copying or distribution prohibited.│
+│                         [HOSPITAL STAMP AREA]                                   │
+└─────────────────────────────────────────────────────────────────────────────────┘`;
 
 // Visual evidence types for image generation
 const visualEvidenceTypes = [
