@@ -340,7 +340,7 @@ export interface GeneratedEvidence {
   prompt: string;
   generated_content: string;
   html_content: string;
-  evidence_type: 'document' | 'visual';
+  evidence_type: 'document' | 'visual' | 'custom' | 'register';
   hospital_config: {
     name: string;
     address: string;

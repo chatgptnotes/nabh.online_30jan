@@ -130,6 +130,22 @@ export default function ObjectiveDetailPage() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
+  // State for custom prompt-based evidence generation
+  const [customEvidencePrompt, setCustomEvidencePrompt] = useState('');
+  const [isGeneratingCustomEvidence, setIsGeneratingCustomEvidence] = useState(false);
+
+  // State for registers section
+  interface RegisterItem {
+    id: string;
+    name: string;
+    description: string;
+    htmlContent: string;
+    isGenerated: boolean;
+  }
+  const [suggestedRegisters, setSuggestedRegisters] = useState<RegisterItem[]>([]);
+  const [selectedRegisters, setSelectedRegisters] = useState<string[]>([]);
+  const [isGeneratingRegisters, setIsGeneratingRegisters] = useState(false);
+
   // Hospital config for evidence generation
   const nabhCoordinator = getNABHCoordinator();
   const hospitalConfig = {
@@ -633,15 +649,17 @@ Format your response as a numbered list (1-10) with each evidence item on a new 
     return `${day}/${month}/${year}`;
   };
 
+  // Document dates should be 9 months prior to current date (for NABH audit compliance)
   const today = new Date();
-  const effectiveDate = getFormattedDate(today);
-  const reviewDate = getFormattedDate(new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()));
+  const documentDate = new Date(today.getFullYear(), today.getMonth() - 9, today.getDate());
+  const effectiveDate = getFormattedDate(documentDate);
+  const reviewDate = getFormattedDate(new Date(documentDate.getFullYear() + 1, documentDate.getMonth(), documentDate.getDate()));
 
   // Logo URL (use absolute URL for generated documents)
   const logoUrl = `${window.location.origin}/hospital-logo.png`;
 
   // Get the HTML template for evidence documents
-  const getEvidenceDocumentPrompt = () => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for Dr. Murali's Hope Hospital.
+  const getEvidenceDocumentPrompt = () => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for Hope Hospital.
 
 Generate a complete HTML document for the selected evidence item in ENGLISH ONLY (internal document).
 
@@ -855,6 +873,13 @@ Generate the complete HTML with all sections filled in appropriately based on th
   const postProcessHTML = (html: string): string => {
     let processed = html;
 
+    // 0. FIRST - Replace ALL variations of "Dr. Murali's Hope Hospital" with "Hope Hospital" EVERYWHERE
+    // This must happen FIRST before any other processing
+    processed = processed.replace(/Dr\.?\s*Murali'?s?\s+Hope\s+Hospital/gi, 'Hope Hospital');
+    processed = processed.replace(/Dr\.?\s*Murali'?s?\s*Hope\s*Hospital/gi, 'Hope Hospital');
+    processed = processed.replace(/DR\.?\s*MURALI'?S?\s+HOPE\s+HOSPITAL/gi, 'HOPE HOSPITAL');
+    processed = processed.replace(/DR\.?\s*MURALI'?S?\s*HOPE\s*HOSPITAL/gi, 'HOPE HOSPITAL');
+
     // 1. REMOVE the tagline div completely (handles nested divs issue)
     processed = processed.replace(/<div[^>]*class="tagline"[^>]*>[\s\S]*?<\/div>/gi, '');
 
@@ -891,7 +916,18 @@ Generate the complete HTML with all sections filled in appropriately based on th
     processed = processed.replace(/Effective Date<\/th><td>[^<]*<\/td>/gi, `Effective Date</th><td>${effectiveDate}</td>`);
     processed = processed.replace(/Review Date<\/th><td>[^<]*<\/td>/gi, `Review Date</th><td>${reviewDate}</td>`);
 
-    // 7. Fix signature sections
+    // 7. Fix signature sections with realistic handwritten signatures
+    const jagrutiSignature = `<svg width="120" height="40" viewBox="0 0 120 40" style="display:inline-block;vertical-align:middle;">
+      <path d="M5,25 Q15,10 25,20 T45,15 Q55,25 65,20 T85,25 Q95,15 105,22"
+            stroke="#1565C0" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <text x="10" y="38" font-family="serif" font-size="8" fill="#666">Jagruti</text>
+    </svg>`;
+    const drShirazSignature = `<svg width="140" height="45" viewBox="0 0 140 45" style="display:inline-block;vertical-align:middle;">
+      <path d="M10,20 Q20,5 35,18 T55,12 Q70,22 85,15 T110,20 Q120,10 130,18"
+            stroke="#0D47A1" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <text x="15" y="42" font-family="serif" font-size="9" fill="#444">Dr. Shiraz Sheikh</text>
+    </svg>`;
+
     processed = processed.replace(
       /Name:\s*(Quality Manager|Quality Officer|Staff|Prepared By Staff|\[Name\])?(\s*<br|\s*$)/gi,
       `Name: Jagruti$2`
@@ -902,10 +938,14 @@ Generate the complete HTML with all sections filled in appropriately based on th
     );
     processed = processed.replace(
       /Signature:\s*<\/td>/gi,
-      `Signature: <div style="font-family: 'Brush Script MT', cursive; font-size: 16px; color: #0D47A1; margin-top: 5px;">Sd/-</div></td>`
+      `Signature: ${jagrutiSignature}</td>`
+    );
+    processed = processed.replace(
+      /Sd\/-/gi,
+      jagrutiSignature
     );
 
-    // 8. Ensure Dr. Shiraz Sheikh is in Approved By
+    // 8. Ensure Dr. Shiraz Sheikh is in Approved By with realistic signature
     if (!processed.includes('Dr. Shiraz Sheikh') && processed.includes('APPROVED BY')) {
       processed = processed.replace(
         /APPROVED BY<\/th>[\s\S]*?<td>([\s\S]*?)<\/td>/i,
@@ -913,16 +953,12 @@ Generate the complete HTML with all sections filled in appropriately based on th
           <div><strong>Dr. Shiraz Sheikh</strong></div>
           <div>NABH Coordinator / Administrator</div>
           <div>Date: ${effectiveDate}</div>
-          <div style="font-family: 'Brush Script MT', cursive; font-size: 18px; color: #0D47A1; margin-top: 8px;">Dr. Shiraz Sheikh</div>
+          <div style="margin-top: 8px;">${drShirazSignature}</div>
         </td>`
       );
     }
 
-    // 9. Fix footer - find and replace the content inside footer div
-    // First, replace "Dr. Murali's Hope Hospital" with "Hope Hospital" everywhere
-    processed = processed.replace(/Dr\.\s*Murali'?s\s+Hope\s+Hospital/gi, 'Hope Hospital');
-
-    // Then fix phone numbers in footer
+    // 9. Fix phone numbers
     processed = processed.replace(
       /Phone:\s*\+?91-?X+|\+91-XXXX-XXXXXX/gi,
       'Phone: +91-9373111709'
@@ -946,6 +982,9 @@ Generate the complete HTML with all sections filled in appropriately based on th
 
     // 12. Final cleanup - remove any remaining tagline text
     processed = processed.replace(/>\s*Assured\s*\|\s*Committed\s*\|\s*Proficient\s*</gi, '><');
+
+    // 13. Final pass - ensure no "Dr. Murali" text remains anywhere
+    processed = processed.replace(/Dr\.?\s*Murali/gi, '');
 
     return processed;
   };
@@ -1159,6 +1198,289 @@ Generate complete, ready-to-use content/template for this evidence in ENGLISH ON
       printWindow.document.close();
       printWindow.print();
     }
+  };
+
+  // Generate custom evidence from user prompt
+  const handleGenerateCustomEvidence = async () => {
+    if (!customEvidencePrompt.trim()) {
+      setSnackbarMessage('Please enter a prompt for the evidence document');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    setIsGeneratingCustomEvidence(true);
+
+    try {
+      const geminiApiKey = await getGeminiApiKey();
+      if (!geminiApiKey) {
+        throw new Error('Gemini API key not configured');
+      }
+
+      const prompt = `${getEvidenceDocumentPrompt()}
+
+OBJECTIVE: ${objective?.code} - ${objective?.title}
+
+USER REQUEST: ${customEvidencePrompt}
+
+Generate a complete, professional HTML document for the above requirement. Include realistic dummy data, proper formatting, and all sections as specified in the template.`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      if (rawContent) {
+        const extractedHtml = extractHTMLFromResponse(rawContent);
+        const htmlContent = postProcessHTML(extractedHtml);
+        const title = customEvidencePrompt.substring(0, 100);
+
+        const result = await saveGeneratedEvidence({
+          objective_code: objective?.code || '',
+          evidence_title: title,
+          prompt: customEvidencePrompt,
+          generated_content: extractTextFromHTML(htmlContent),
+          html_content: htmlContent,
+          evidence_type: 'custom',
+          hospital_config: hospitalConfig,
+        });
+
+        if (result.success && result.id) {
+          const newEvidence: GeneratedEvidence = {
+            id: result.id,
+            objective_code: objective?.code || '',
+            evidence_title: title,
+            prompt: customEvidencePrompt,
+            generated_content: extractTextFromHTML(htmlContent),
+            html_content: htmlContent,
+            evidence_type: 'custom',
+            hospital_config: hospitalConfig,
+            created_at: new Date().toISOString(),
+          };
+          setSavedEvidences(prev => [newEvidence, ...prev]);
+          setCustomEvidencePrompt('');
+          setSnackbarMessage('Custom evidence document generated successfully');
+          setSnackbarOpen(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating custom evidence:', error);
+      setSnackbarMessage('Error generating custom evidence. Check console.');
+      setSnackbarOpen(true);
+    }
+
+    setIsGeneratingCustomEvidence(false);
+  };
+
+  // Get suggested registers based on objective
+  const getSuggestedRegistersForObjective = (): RegisterItem[] => {
+    const objectiveCode = objective?.code || '';
+
+    // Common registers for different NABH objectives
+    const registerSuggestions: Record<string, RegisterItem[]> = {
+      'AAC': [
+        { id: 'reg-aac-1', name: 'Patient Registration Register', description: 'Register of all patients with UHID, demographics, and admission details', htmlContent: '', isGenerated: false },
+        { id: 'reg-aac-2', name: 'Admission Register', description: 'Daily admission register with patient details and bed allocation', htmlContent: '', isGenerated: false },
+        { id: 'reg-aac-3', name: 'Discharge Register', description: 'Patient discharge details with outcomes and follow-up instructions', htmlContent: '', isGenerated: false },
+        { id: 'reg-aac-4', name: 'Transfer Register', description: 'Inter-department and external transfer records', htmlContent: '', isGenerated: false },
+        { id: 'reg-aac-5', name: 'Bed Occupancy Register', description: 'Daily bed census and occupancy tracking', htmlContent: '', isGenerated: false },
+      ],
+      'COP': [
+        { id: 'reg-cop-1', name: 'Patient Assessment Register', description: 'Initial and ongoing patient assessment records', htmlContent: '', isGenerated: false },
+        { id: 'reg-cop-2', name: 'Clinical Care Plan Register', description: 'Individualized care plans for patients', htmlContent: '', isGenerated: false },
+        { id: 'reg-cop-3', name: 'Nursing Care Register', description: 'Daily nursing care documentation', htmlContent: '', isGenerated: false },
+        { id: 'reg-cop-4', name: 'Patient Education Register', description: 'Patient and family education records', htmlContent: '', isGenerated: false },
+        { id: 'reg-cop-5', name: 'Consent Register', description: 'All consent forms obtained from patients', htmlContent: '', isGenerated: false },
+      ],
+      'MOM': [
+        { id: 'reg-mom-1', name: 'Drug Inventory Register', description: 'Stock register for all medications', htmlContent: '', isGenerated: false },
+        { id: 'reg-mom-2', name: 'High Alert Medication Register', description: 'Tracking of high-alert and look-alike drugs', htmlContent: '', isGenerated: false },
+        { id: 'reg-mom-3', name: 'Narcotic Drug Register', description: 'Controlled substance tracking and accountability', htmlContent: '', isGenerated: false },
+        { id: 'reg-mom-4', name: 'Adverse Drug Reaction Register', description: 'ADR reporting and monitoring', htmlContent: '', isGenerated: false },
+        { id: 'reg-mom-5', name: 'Emergency Drug Register', description: 'Emergency medication usage tracking', htmlContent: '', isGenerated: false },
+      ],
+      'PRE': [
+        { id: 'reg-pre-1', name: 'Patient Rights Register', description: 'Documentation of patient rights information provided', htmlContent: '', isGenerated: false },
+        { id: 'reg-pre-2', name: 'Complaint Register', description: 'Patient complaints and grievance handling', htmlContent: '', isGenerated: false },
+        { id: 'reg-pre-3', name: 'Feedback Register', description: 'Patient feedback and satisfaction records', htmlContent: '', isGenerated: false },
+        { id: 'reg-pre-4', name: 'Informed Consent Register', description: 'All informed consents obtained', htmlContent: '', isGenerated: false },
+      ],
+      'HIC': [
+        { id: 'reg-hic-1', name: 'Hand Hygiene Audit Register', description: 'Hand hygiene compliance monitoring', htmlContent: '', isGenerated: false },
+        { id: 'reg-hic-2', name: 'Hospital Acquired Infection Register', description: 'HAI surveillance and tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-hic-3', name: 'Biomedical Waste Register', description: 'BMW generation and disposal tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-hic-4', name: 'Sterilization Register', description: 'CSSD sterilization records', htmlContent: '', isGenerated: false },
+        { id: 'reg-hic-5', name: 'Needle Stick Injury Register', description: 'NSI incidents and post-exposure prophylaxis', htmlContent: '', isGenerated: false },
+      ],
+      'FMS': [
+        { id: 'reg-fms-1', name: 'Equipment Maintenance Register', description: 'Preventive and breakdown maintenance records', htmlContent: '', isGenerated: false },
+        { id: 'reg-fms-2', name: 'Fire Safety Drill Register', description: 'Mock drill records and observations', htmlContent: '', isGenerated: false },
+        { id: 'reg-fms-3', name: 'Incident Register', description: 'All facility-related incidents', htmlContent: '', isGenerated: false },
+        { id: 'reg-fms-4', name: 'Calibration Register', description: 'Equipment calibration tracking', htmlContent: '', isGenerated: false },
+      ],
+      'HRM': [
+        { id: 'reg-hrm-1', name: 'Staff Attendance Register', description: 'Daily attendance and leave tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-hrm-2', name: 'Training Register', description: 'Staff training records and certifications', htmlContent: '', isGenerated: false },
+        { id: 'reg-hrm-3', name: 'Credential Verification Register', description: 'License and credential verification', htmlContent: '', isGenerated: false },
+        { id: 'reg-hrm-4', name: 'Performance Appraisal Register', description: 'Annual performance reviews', htmlContent: '', isGenerated: false },
+      ],
+      'QI': [
+        { id: 'reg-qi-1', name: 'Quality Indicator Register', description: 'Monthly quality indicators tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-qi-2', name: 'CAPA Register', description: 'Corrective and Preventive Actions tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-qi-3', name: 'Near Miss Register', description: 'Near miss events reporting', htmlContent: '', isGenerated: false },
+        { id: 'reg-qi-4', name: 'Sentinel Event Register', description: 'Sentinel events and RCA documentation', htmlContent: '', isGenerated: false },
+        { id: 'reg-qi-5', name: 'Patient Safety Incident Register', description: 'All patient safety incidents', htmlContent: '', isGenerated: false },
+      ],
+    };
+
+    // Find matching registers based on objective code prefix
+    const prefix = objectiveCode.substring(0, 3).toUpperCase();
+    let registers = registerSuggestions[prefix] || [];
+
+    // If no exact match, provide generic registers
+    if (registers.length === 0) {
+      registers = [
+        { id: 'reg-gen-1', name: 'Activity Register', description: `Register for ${objective?.title || 'activities'}`, htmlContent: '', isGenerated: false },
+        { id: 'reg-gen-2', name: 'Compliance Checklist Register', description: 'Daily/weekly compliance tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-gen-3', name: 'Audit Register', description: 'Internal audit findings and actions', htmlContent: '', isGenerated: false },
+        { id: 'reg-gen-4', name: 'Training Record Register', description: 'Related training documentation', htmlContent: '', isGenerated: false },
+      ];
+    }
+
+    return registers;
+  };
+
+  // Load suggested registers when objective changes
+  useEffect(() => {
+    if (objective?.code) {
+      const registers = getSuggestedRegistersForObjective();
+      setSuggestedRegisters(registers);
+    }
+  }, [objective?.code]);
+
+  // Toggle register selection
+  const handleToggleRegister = (registerId: string) => {
+    setSelectedRegisters(prev =>
+      prev.includes(registerId)
+        ? prev.filter(id => id !== registerId)
+        : [...prev, registerId]
+    );
+  };
+
+  // Generate selected registers
+  const handleGenerateRegisters = async () => {
+    if (selectedRegisters.length === 0) {
+      setSnackbarMessage('Please select at least one register to generate');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    setIsGeneratingRegisters(true);
+
+    try {
+      const geminiApiKey = await getGeminiApiKey();
+      if (!geminiApiKey) throw new Error('Gemini API key not configured');
+
+      for (const registerId of selectedRegisters) {
+        const register = suggestedRegisters.find(r => r.id === registerId);
+        if (!register) continue;
+
+        const prompt = `Generate a complete HTML document for a hospital register/log book.
+
+HOSPITAL: Hope Hospital, ${hospitalConfig.address}
+REGISTER NAME: ${register.name}
+DESCRIPTION: ${register.description}
+NABH OBJECTIVE: ${objective?.code} - ${objective?.title}
+
+Create a professional, print-ready HTML document with:
+1. Hospital header with logo placeholder and address
+2. Register title and purpose
+3. A table with realistic dummy data (at least 15-20 entries spanning the last 9 months)
+4. Columns appropriate for this type of register
+5. Space for signatures/verifications
+6. Footer with controlled document stamp
+
+For CAPA entries, include:
+- Finding/Issue description
+- Root cause analysis
+- Corrective action taken
+- Preventive measures implemented
+- Responsible person
+- Target date and completion date
+- Verification status
+
+Use realistic Indian names, dates (within last 9 months), and data that would be acceptable to NABH auditors.
+
+Generate complete HTML with embedded CSS. Do NOT use markdown or code blocks.`;
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+            }),
+          }
+        );
+
+        if (!response.ok) continue;
+        const data = await response.json();
+        const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        if (rawContent) {
+          const extractedHtml = extractHTMLFromResponse(rawContent);
+          const htmlContent = postProcessHTML(extractedHtml);
+
+          // Save to Supabase
+          const result = await saveGeneratedEvidence({
+            objective_code: objective?.code || '',
+            evidence_title: register.name,
+            prompt: `Register: ${register.name} - ${register.description}`,
+            generated_content: extractTextFromHTML(htmlContent),
+            html_content: htmlContent,
+            evidence_type: 'register',
+            hospital_config: hospitalConfig,
+          });
+
+          if (result.success && result.id) {
+            const newEvidence: GeneratedEvidence = {
+              id: result.id,
+              objective_code: objective?.code || '',
+              evidence_title: register.name,
+              prompt: `Register: ${register.name}`,
+              generated_content: extractTextFromHTML(htmlContent),
+              html_content: htmlContent,
+              evidence_type: 'register',
+              hospital_config: hospitalConfig,
+              created_at: new Date().toISOString(),
+            };
+            setSavedEvidences(prev => [newEvidence, ...prev]);
+          }
+        }
+      }
+
+      setSelectedRegisters([]);
+      setSnackbarMessage(`Generated ${selectedRegisters.length} register(s) successfully`);
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Error generating registers:', error);
+      setSnackbarMessage('Error generating registers. Check console.');
+      setSnackbarOpen(true);
+    }
+
+    setIsGeneratingRegisters(false);
   };
 
   const selectedEvidenceCount = parsedEvidenceItems.filter(item => item.selected).length;
@@ -1951,6 +2273,107 @@ DESIGN REQUIREMENTS:
               </AccordionDetails>
             </Accordion>
           )}
+
+          {/* Custom Evidence Generator */}
+          <Accordion sx={{ bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
+            <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon color="warning">edit_note</Icon>
+                <Typography fontWeight={600}>Custom Evidence Generator</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="info" icon={<Icon>lightbulb</Icon>} sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Enter your own requirement to generate a custom evidence document. Describe what document you need and the AI will create it with proper hospital branding and formatting.
+                </Typography>
+              </Alert>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Enter your evidence document requirement"
+                placeholder="Example: Create a patient feedback form for OPD services with fields for patient name, date, department visited, doctor name, waiting time, staff behavior rating, facility cleanliness rating, overall satisfaction, and suggestions..."
+                value={customEvidencePrompt}
+                onChange={(e) => setCustomEvidencePrompt(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={isGeneratingCustomEvidence ? <CircularProgress size={20} color="inherit" /> : <Icon>auto_awesome</Icon>}
+                onClick={handleGenerateCustomEvidence}
+                disabled={isGeneratingCustomEvidence || !customEvidencePrompt.trim()}
+              >
+                {isGeneratingCustomEvidence ? 'Generating Custom Evidence...' : 'Generate Custom Evidence'}
+              </Button>
+            </AccordionDetails>
+          </Accordion>
+
+          {/* Registers Section */}
+          <Accordion sx={{ bgcolor: 'secondary.50', border: '1px solid', borderColor: 'secondary.200' }}>
+            <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon color="secondary">menu_book</Icon>
+                <Typography fontWeight={600}>Generate Registers & CAPA Records</Typography>
+                {selectedRegisters.length > 0 && (
+                  <Chip label={`${selectedRegisters.length} selected`} size="small" color="secondary" />
+                )}
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="info" icon={<Icon>lightbulb</Icon>} sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Generate digital registers with realistic dummy data for NABH audit. Registers include tables with entries spanning 9 months, CAPA documentation, and analysis data acceptable to auditors.
+                </Typography>
+              </Alert>
+
+              {/* Register Selection */}
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Suggested Registers for {objective?.code}:
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 2, mb: 2, maxHeight: 250, overflow: 'auto' }}>
+                <FormGroup>
+                  {suggestedRegisters.map((register) => (
+                    <FormControlLabel
+                      key={register.id}
+                      control={
+                        <Checkbox
+                          checked={selectedRegisters.includes(register.id)}
+                          onChange={() => handleToggleRegister(register.id)}
+                          color="secondary"
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>{register.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{register.description}</Typography>
+                        </Box>
+                      }
+                      sx={{
+                        alignItems: 'flex-start',
+                        mb: 1,
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: selectedRegisters.includes(register.id) ? 'secondary.50' : 'transparent',
+                        '&:hover': { bgcolor: 'grey.100' },
+                      }}
+                    />
+                  ))}
+                </FormGroup>
+              </Paper>
+
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={isGeneratingRegisters ? <CircularProgress size={20} color="inherit" /> : <Icon>table_chart</Icon>}
+                onClick={handleGenerateRegisters}
+                disabled={isGeneratingRegisters || selectedRegisters.length === 0}
+              >
+                {isGeneratingRegisters ? 'Generating Registers...' : `Generate Selected Registers (${selectedRegisters.length})`}
+              </Button>
+            </AccordionDetails>
+          </Accordion>
 
           {/* Generated Evidences Section */}
           {(savedEvidences.length > 0 || isLoadingEvidences) && (
