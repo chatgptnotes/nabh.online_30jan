@@ -2375,39 +2375,55 @@ DESIGN REQUIREMENTS:
             </AccordionDetails>
           </Accordion>
 
-          {/* Generated Evidences Section */}
-          {(savedEvidences.length > 0 || isLoadingEvidences) && (
-            <Accordion defaultExpanded sx={{ bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
-              <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Icon color="info">folder_open</Icon>
-                  <Typography fontWeight={600}>Generated Evidence Documents</Typography>
-                  <Chip
-                    label={savedEvidences.length}
-                    size="small"
-                    color="info"
-                  />
+          {/* Generated Evidences Section - Always visible */}
+          <Accordion defaultExpanded sx={{ bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
+            <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon color="info">folder_open</Icon>
+                <Typography fontWeight={600}>Generated Evidence Documents & Registers</Typography>
+                <Chip
+                  label={savedEvidences.length}
+                  size="small"
+                  color="info"
+                />
+                {(isGeneratingDocuments || isGeneratingCustomEvidence || isGeneratingRegisters) && (
+                  <CircularProgress size={16} sx={{ ml: 1 }} />
+                )}
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              {isLoadingEvidences ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={32} />
+                  <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                    Loading saved evidences...
+                  </Typography>
                 </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                {isLoadingEvidences ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress size={32} />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-                      Loading saved evidences...
-                    </Typography>
-                  </Box>
-                ) : (
+              ) : savedEvidences.length === 0 ? (
+                <Alert severity="info" icon={<Icon>info</Icon>}>
+                  <Typography variant="body2">
+                    No generated documents yet. Use the sections above to generate evidence documents, custom documents, or registers.
+                  </Typography>
+                </Alert>
+              ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {savedEvidences.map((evidence) => (
                       <Card key={evidence.id} variant="outlined" sx={{ overflow: 'visible' }}>
                         <CardContent sx={{ pb: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Icon color="info">description</Icon>
+                              <Icon color={evidence.evidence_type === 'register' ? 'secondary' : evidence.evidence_type === 'custom' ? 'warning' : 'info'}>
+                                {evidence.evidence_type === 'register' ? 'menu_book' : evidence.evidence_type === 'custom' ? 'edit_note' : 'description'}
+                              </Icon>
                               <Typography variant="subtitle1" fontWeight={600}>
                                 {evidence.evidence_title}
                               </Typography>
+                              <Chip
+                                size="small"
+                                label={evidence.evidence_type === 'register' ? 'Register' : evidence.evidence_type === 'custom' ? 'Custom' : 'Document'}
+                                color={evidence.evidence_type === 'register' ? 'secondary' : evidence.evidence_type === 'custom' ? 'warning' : 'info'}
+                                sx={{ height: 20, fontSize: '0.7rem' }}
+                              />
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Chip
@@ -2712,7 +2728,6 @@ DESIGN REQUIREMENTS:
                 )}
               </AccordionDetails>
             </Accordion>
-          )}
 
           <TextField
             fullWidth
