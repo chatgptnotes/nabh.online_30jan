@@ -351,6 +351,7 @@ export interface GeneratedEvidence {
     qualityCoordinatorDesignation: string;
   };
   created_at: string;
+  is_auditor_ready?: boolean;
 }
 
 /**

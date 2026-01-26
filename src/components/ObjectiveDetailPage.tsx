@@ -146,6 +146,14 @@ export default function ObjectiveDetailPage() {
   const [selectedRegisters, setSelectedRegisters] = useState<string[]>([]);
   const [isGeneratingRegisters, setIsGeneratingRegisters] = useState(false);
 
+  // State for document improvement feature
+  const [uploadedDocumentFile, setUploadedDocumentFile] = useState<File | null>(null);
+  const [uploadedDocumentPreview, setUploadedDocumentPreview] = useState<string>('');
+  const [extractedDocumentText, setExtractedDocumentText] = useState('');
+  const [isExtractingText, setIsExtractingText] = useState(false);
+  const [isImprovingDocument, setIsImprovingDocument] = useState(false);
+  const documentUploadRef = useRef<HTMLInputElement>(null);
+
   // Hospital config for evidence generation
   const nabhCoordinator = getNABHCoordinator();
   const hospitalConfig = {
@@ -1547,6 +1555,208 @@ Generate complete HTML with embedded CSS. Do NOT use markdown or code blocks.`;
     setIsGeneratingRegisters(false);
   };
 
+  // Handle document upload for improvement
+  const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadedDocumentFile(file);
+    setExtractedDocumentText('');
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedDocumentPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setUploadedDocumentPreview('');
+    }
+
+    // Extract text using Gemini Vision
+    await extractTextFromDocument(file);
+  };
+
+  // Extract text from uploaded document using Gemini Vision
+  const extractTextFromDocument = async (file: File) => {
+    setIsExtractingText(true);
+
+    try {
+      const geminiApiKey = await getGeminiApiKey();
+      if (!geminiApiKey) {
+        throw new Error('Gemini API key not configured');
+      }
+
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]); // Remove data URL prefix
+        };
+        reader.readAsDataURL(file);
+      });
+
+      const mimeType = file.type || 'image/jpeg';
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64,
+                  },
+                },
+                {
+                  text: `Extract ALL text content from this document image. This is a hospital document/register/form.
+
+Return the extracted text in a structured format:
+1. Document Title/Header
+2. All field labels and their values
+3. Table headers and data (if any)
+4. Any signatures, dates, or footer text
+
+Be thorough and extract every piece of text visible in the document. Maintain the structure and layout as much as possible.`,
+                },
+              ],
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      const extractedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      setExtractedDocumentText(extractedText);
+      setSnackbarMessage('Text extracted from document successfully');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Error extracting text:', error);
+      setSnackbarMessage('Error extracting text from document. Try again.');
+      setSnackbarOpen(true);
+    }
+
+    setIsExtractingText(false);
+  };
+
+  // Generate improved document from extracted text
+  const handleImproveDocument = async () => {
+    if (!extractedDocumentText.trim()) {
+      setSnackbarMessage('Please upload a document first to extract text');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    setIsImprovingDocument(true);
+
+    try {
+      const geminiApiKey = await getGeminiApiKey();
+      if (!geminiApiKey) throw new Error('Gemini API key not configured');
+
+      const prompt = `You are a hospital document designer for Hope Hospital. Create a professionally designed HTML document based on the following extracted content from an existing hospital document.
+
+HOSPITAL: Hope Hospital
+ADDRESS: ${hospitalConfig.address}
+PHONE: +91-9373111709
+
+EXTRACTED CONTENT FROM ORIGINAL DOCUMENT:
+${extractedDocumentText}
+
+NABH OBJECTIVE: ${objective?.code} - ${objective?.title}
+
+INSTRUCTIONS:
+1. Create a complete, professional HTML document with embedded CSS
+2. Maintain ALL the original content and data - do not remove any information
+3. Improve the visual design with:
+   - Clean, modern layout
+   - Professional typography
+   - Proper tables with borders and alternating row colors
+   - Clear section headers
+   - Hospital branding header with logo placeholder
+   - Proper spacing and alignment
+4. Add hospital header with logo placeholder and address
+5. Add professional footer with hospital details
+6. Add controlled document stamp area
+7. Include signature blocks if relevant
+8. Use dates from the original document, or if not present, use dates within last 9 months
+
+Generate complete HTML with embedded CSS. Do NOT use markdown or code blocks. Start directly with <!DOCTYPE html>.`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      if (rawContent) {
+        const extractedHtml = extractHTMLFromResponse(rawContent);
+        const htmlContent = postProcessHTML(extractedHtml);
+        const title = `Improved: ${uploadedDocumentFile?.name || 'Document'}`;
+
+        const result = await saveGeneratedEvidence({
+          objective_code: objective?.code || '',
+          evidence_title: title,
+          prompt: `Improved document from: ${uploadedDocumentFile?.name}`,
+          generated_content: extractTextFromHTML(htmlContent),
+          html_content: htmlContent,
+          evidence_type: 'document',
+          hospital_config: hospitalConfig,
+        });
+
+        if (result.success && result.id) {
+          const newEvidence: GeneratedEvidence = {
+            id: result.id,
+            objective_code: objective?.code || '',
+            evidence_title: title,
+            prompt: `Improved document from: ${uploadedDocumentFile?.name}`,
+            generated_content: extractTextFromHTML(htmlContent),
+            html_content: htmlContent,
+            evidence_type: 'document',
+            hospital_config: hospitalConfig,
+            created_at: new Date().toISOString(),
+          };
+          setSavedEvidences(prev => [newEvidence, ...prev]);
+
+          // Clear the upload state
+          setUploadedDocumentFile(null);
+          setUploadedDocumentPreview('');
+          setExtractedDocumentText('');
+          if (documentUploadRef.current) {
+            documentUploadRef.current.value = '';
+          }
+
+          setSnackbarMessage('Document improved and saved successfully');
+          setSnackbarOpen(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error improving document:', error);
+      setSnackbarMessage('Error improving document. Check console.');
+      setSnackbarOpen(true);
+    }
+
+    setIsImprovingDocument(false);
+  };
+
   const selectedEvidenceCount = parsedEvidenceItems.filter(item => item.selected).length;
 
   // Generate Hindi explanation based on interpretation
@@ -2439,6 +2649,123 @@ DESIGN REQUIREMENTS:
             </AccordionDetails>
           </Accordion>
 
+          {/* Document Improvement Section */}
+          <Accordion sx={{ bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+            <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon color="primary">upload_file</Icon>
+                <Typography fontWeight={600}>Improve Existing Document</Typography>
+                {uploadedDocumentFile && (
+                  <Chip label={uploadedDocumentFile.name} size="small" color="primary" sx={{ maxWidth: 200 }} />
+                )}
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="info" icon={<Icon>lightbulb</Icon>} sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Upload an existing hospital document (register, form, stationery) and generate a professionally designed, improved version with Hope Hospital branding.
+                </Typography>
+              </Alert>
+
+              {/* File Upload */}
+              <input
+                type="file"
+                ref={documentUploadRef}
+                onChange={handleDocumentUpload}
+                accept="image/*,.pdf"
+                style={{ display: 'none' }}
+              />
+              <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<Icon>upload</Icon>}
+                  onClick={() => documentUploadRef.current?.click()}
+                  disabled={isExtractingText}
+                >
+                  Upload Document
+                </Button>
+                {uploadedDocumentFile && (
+                  <Button
+                    variant="text"
+                    color="error"
+                    size="small"
+                    startIcon={<Icon>delete</Icon>}
+                    onClick={() => {
+                      setUploadedDocumentFile(null);
+                      setUploadedDocumentPreview('');
+                      setExtractedDocumentText('');
+                      if (documentUploadRef.current) documentUploadRef.current.value = '';
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </Box>
+
+              {/* Preview and Extracted Text */}
+              {(uploadedDocumentPreview || extractedDocumentText) && (
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  {/* Image Preview */}
+                  {uploadedDocumentPreview && (
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <Paper variant="outlined" sx={{ p: 1 }}>
+                        <Typography variant="caption" fontWeight={600} sx={{ mb: 1, display: 'block' }}>
+                          Uploaded Document:
+                        </Typography>
+                        <img
+                          src={uploadedDocumentPreview}
+                          alt="Uploaded document"
+                          style={{ width: '100%', height: 'auto', maxHeight: 300, objectFit: 'contain' }}
+                        />
+                      </Paper>
+                    </Grid>
+                  )}
+
+                  {/* Extracted Text */}
+                  <Grid size={{ xs: 12, md: uploadedDocumentPreview ? 8 : 12 }}>
+                    <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflow: 'auto' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="caption" fontWeight={600}>
+                          Extracted Content:
+                        </Typography>
+                        {isExtractingText && <CircularProgress size={16} />}
+                      </Box>
+                      {extractedDocumentText ? (
+                        <TextField
+                          fullWidth
+                          multiline
+                          minRows={8}
+                          maxRows={12}
+                          value={extractedDocumentText}
+                          onChange={(e) => setExtractedDocumentText(e.target.value)}
+                          size="small"
+                          placeholder="Extracted text will appear here..."
+                          helperText="You can edit the extracted text before generating the improved document"
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          {isExtractingText ? 'Extracting text from document...' : 'Upload a document to extract text'}
+                        </Typography>
+                      )}
+                    </Paper>
+                  </Grid>
+                </Grid>
+              )}
+
+              {/* Generate Button */}
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={isImprovingDocument ? <CircularProgress size={20} color="inherit" /> : <Icon>auto_fix_high</Icon>}
+                onClick={handleImproveDocument}
+                disabled={isImprovingDocument || !extractedDocumentText.trim()}
+              >
+                {isImprovingDocument ? 'Generating Improved Document...' : 'Generate Improved Document'}
+              </Button>
+            </AccordionDetails>
+          </Accordion>
+
           {/* Generated Evidences Section - Always visible */}
           <Accordion defaultExpanded sx={{ bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
             <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
@@ -2776,6 +3103,27 @@ DESIGN REQUIREMENTS:
                               </Button>
                             </Tooltip>
                           </Box>
+                          <Tooltip title={evidence.is_auditor_ready ? 'Remove from auditor list' : 'Mark as auditor ready'}>
+                            <Button
+                              size="small"
+                              variant={evidence.is_auditor_ready ? 'contained' : 'outlined'}
+                              color={evidence.is_auditor_ready ? 'success' : 'inherit'}
+                              startIcon={<Icon>{evidence.is_auditor_ready ? 'star' : 'star_border'}</Icon>}
+                              onClick={async () => {
+                                const newValue = !evidence.is_auditor_ready;
+                                const result = await updateGeneratedEvidence(evidence.id, { is_auditor_ready: newValue });
+                                if (result.success) {
+                                  setSavedEvidences(prev =>
+                                    prev.map(ev => ev.id === evidence.id ? { ...ev, is_auditor_ready: newValue } : ev)
+                                  );
+                                  setSnackbarMessage(newValue ? 'Marked as auditor ready' : 'Removed from auditor list');
+                                  setSnackbarOpen(true);
+                                }
+                              }}
+                            >
+                              {evidence.is_auditor_ready ? 'Auditor Ready' : 'Mark Ready'}
+                            </Button>
+                          </Tooltip>
                           <Button
                             size="small"
                             variant="contained"
