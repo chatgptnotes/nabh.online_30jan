@@ -160,6 +160,7 @@ const obj = (
     evidenceFiles: [],
     youtubeVideos,
     trainingMaterials: [],
+    sopDocuments: [],
     priority: finalPriority as ObjectiveElement['priority'],
     assignee: finalAssignee,
     status: finalStatus as ObjectiveElement['status'],

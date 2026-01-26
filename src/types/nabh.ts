@@ -35,6 +35,21 @@ export interface TrainingMaterial {
   participants?: string[];
 }
 
+export interface SOPDocument {
+  id: string;
+  title: string;
+  fileName: string;
+  fileType: 'pdf' | 'doc' | 'docx';
+  fileSize: number;
+  dataUrl: string;               // Base64 data URL for storage
+  version: string;
+  effectiveDate: string;
+  reviewDate?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  description?: string;
+}
+
 export interface ObjectiveElement {
   id: string;
   code: string;
@@ -48,6 +63,7 @@ export interface ObjectiveElement {
   evidenceFiles: EvidenceFile[]; // Uploaded evidence files (images, PDFs)
   youtubeVideos: YouTubeVideo[]; // YouTube training videos
   trainingMaterials: TrainingMaterial[]; // Internal training evidence
+  sopDocuments: SOPDocument[];  // Hospital SOPs (Word/PDF documents)
   priority: Priority;
   assignee: string;
   status: Status;

@@ -25,9 +25,11 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useNABHStore } from '../store/nabhStore';
-import type { Status, Priority, ElementCategory, EvidenceFile, YouTubeVideo, TrainingMaterial } from '../types/nabh';
-import { ASSIGNEE_OPTIONS } from '../config/hospitalConfig';
+import type { Status, Priority, ElementCategory, EvidenceFile, YouTubeVideo, TrainingMaterial, SOPDocument } from '../types/nabh';
+import { ASSIGNEE_OPTIONS, HOSPITAL_INFO } from '../config/hospitalConfig';
+import { getClaudeApiKey } from '../lib/supabase';
 
 interface ObjectiveDetailProps {
   open: boolean;
@@ -58,6 +60,7 @@ export default function ObjectiveDetail({
   const { chapters, updateObjective } = useNABHStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const trainingFileInputRef = useRef<HTMLInputElement>(null);
+  const sopFileInputRef = useRef<HTMLInputElement>(null);
 
   // State for adding YouTube video
   const [showAddVideo, setShowAddVideo] = useState(false);
@@ -71,6 +74,29 @@ export default function ObjectiveDetail({
   const [newTrainingDescription, setNewTrainingDescription] = useState('');
   const [newTrainingType, setNewTrainingType] = useState<'video' | 'photo' | 'document' | 'certificate'>('photo');
   const [newTrainingDate, setNewTrainingDate] = useState('');
+
+  // State for SOP management
+  const [showAddSOP, setShowAddSOP] = useState(false);
+  const [newSOPTitle, setNewSOPTitle] = useState('');
+  const [newSOPVersion, setNewSOPVersion] = useState('1.0');
+  const [newSOPEffectiveDate, setNewSOPEffectiveDate] = useState('');
+  const [newSOPDescription, setNewSOPDescription] = useState('');
+  const [isGeneratingSOP, setIsGeneratingSOP] = useState(false);
+  const [generatedSOPContent, setGeneratedSOPContent] = useState('');
+
+  // State for training document generators
+  const [trainingDate, setTrainingDate] = useState('');
+  const [trainingTime, setTrainingTime] = useState('');
+  const [trainingVenue, setTrainingVenue] = useState('');
+  const [trainerName, setTrainerName] = useState('');
+  const [trainerDesignation, setTrainerDesignation] = useState('');
+  const [isGeneratingNotice, setIsGeneratingNotice] = useState(false);
+  const [generatedNotice, setGeneratedNotice] = useState('');
+  const [isGeneratingAttendance, setIsGeneratingAttendance] = useState(false);
+  const [generatedAttendance, setGeneratedAttendance] = useState('');
+  const [isGeneratingMCQ, setIsGeneratingMCQ] = useState(false);
+  const [generatedMCQ, setGeneratedMCQ] = useState('');
+  const [mcqQuestionCount, setMcqQuestionCount] = useState(10);
 
   const chapter = chapters.find((c) => c.id === chapterId);
   const objective = chapter?.objectives.find((o) => o.id === objectiveId);
@@ -181,6 +207,493 @@ export default function ObjectiveDetail({
   const getYouTubeThumbnail = (url: string): string => {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
     return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : '';
+  };
+
+  // SOP handlers
+  const handleSOPFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    const maxSize = 25 * 1024 * 1024; // 25MB
+
+    Array.from(files).forEach((file) => {
+      if (!allowedTypes.includes(file.type)) {
+        alert(`File "${file.name}" is not supported. Only PDF and Word documents (DOC, DOCX) are allowed.`);
+        return;
+      }
+
+      if (file.size > maxSize) {
+        alert(`File "${file.name}" is too large. Maximum size is 25MB.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        const fileType = file.type === 'application/pdf' ? 'pdf' :
+                        file.type === 'application/msword' ? 'doc' : 'docx';
+
+        const newSOP: SOPDocument = {
+          id: generateId('sop'),
+          title: newSOPTitle.trim() || file.name.replace(/\.[^/.]+$/, ''),
+          fileName: file.name,
+          fileType: fileType as 'pdf' | 'doc' | 'docx',
+          fileSize: file.size,
+          dataUrl,
+          version: newSOPVersion || '1.0',
+          effectiveDate: newSOPEffectiveDate || new Date().toISOString().split('T')[0],
+          uploadedBy: 'Staff',
+          uploadedAt: new Date().toISOString(),
+          description: newSOPDescription.trim() || undefined,
+        };
+
+        const currentSOPs = objective.sopDocuments || [];
+        updateObjective(chapterId, objective.id, {
+          sopDocuments: [...currentSOPs, newSOP],
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset
+    setNewSOPTitle('');
+    setNewSOPVersion('1.0');
+    setNewSOPEffectiveDate('');
+    setNewSOPDescription('');
+    setShowAddSOP(false);
+    if (sopFileInputRef.current) {
+      sopFileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteSOP = (sopId: string) => {
+    const currentSOPs = objective.sopDocuments || [];
+    updateObjective(chapterId, objective.id, {
+      sopDocuments: currentSOPs.filter((s) => s.id !== sopId),
+    });
+  };
+
+  const handleViewSOP = (sop: SOPDocument) => {
+    const newWindow = window.open();
+    if (newWindow) {
+      if (sop.fileType === 'pdf') {
+        newWindow.document.write(`
+          <html>
+            <head><title>${sop.title} - ${sop.fileName}</title></head>
+            <body style="margin:0;padding:0;">
+              <embed src="${sop.dataUrl}" type="application/pdf" width="100%" height="100%" />
+            </body>
+          </html>
+        `);
+      } else {
+        // For Word documents, provide download link
+        const link = document.createElement('a');
+        link.href = sop.dataUrl;
+        link.download = sop.fileName;
+        link.click();
+      }
+    }
+  };
+
+  const handleGenerateSOP = async () => {
+    const apiKey = getClaudeApiKey();
+    if (!apiKey) {
+      alert('Claude API key not configured. Please add VITE_CLAUDE_API_KEY to your .env file.');
+      return;
+    }
+
+    setIsGeneratingSOP(true);
+    setGeneratedSOPContent('');
+
+    try {
+      const prompt = `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) documentation for ${HOSPITAL_INFO.name}.
+
+Generate a complete, professional, BILINGUAL (English AND Hindi) Standard Operating Procedure (SOP) document for the following NABH objective element.
+
+CRITICAL: The SOP must be in BOTH English AND Hindi throughout.
+
+Hospital: ${HOSPITAL_INFO.name}
+Address: ${HOSPITAL_INFO.address}
+
+NABH Objective Element Code: ${objective.code}
+Title: ${objective.title}
+Description: ${objective.description}
+
+Generate a comprehensive SOP with the following structure:
+
+================================================================================
+                              ${HOSPITAL_INFO.name.toUpperCase()}
+                    STANDARD OPERATING PROCEDURE / मानक संचालन प्रक्रिया
+================================================================================
+
+SOP Title / शीर्षक: [Based on objective element]
+Document No / दस्तावेज़ संख्या: SOP-${objective.code.replace(/\./g, '-')}-001
+Version / संस्करण: 1.0
+Effective Date / प्रभावी तिथि: [Today's date]
+Review Date / समीक्षा तिथि: [One year from today]
+Department / विभाग: [Relevant department]
+Page / पृष्ठ: 1 of X
+
+--------------------------------------------------------------------------------
+
+1. PURPOSE / उद्देश्य
+[Explain the purpose in both English and Hindi]
+
+2. SCOPE / दायरा
+[Define the scope in both English and Hindi]
+
+3. DEFINITIONS / परिभाषाएं
+[List key terms with definitions in both languages]
+
+4. RESPONSIBILITIES / जिम्मेदारियां
+[Define roles and responsibilities in both languages]
+
+5. PROCEDURE / प्रक्रिया
+[Step-by-step procedure in both languages]
+
+6. DOCUMENTATION / दस्तावेज़ीकरण
+[Required documentation and records in both languages]
+
+7. REFERENCES / संदर्भ
+- NABH Standards
+- Hospital Policies
+- Relevant Guidelines
+
+8. ATTACHMENTS / संलग्नक
+[List any forms, checklists, or annexures]
+
+================================================================================
+PREPARED BY / तैयारकर्ता:         REVIEWED BY / समीक्षाकर्ता:      APPROVED BY / अनुमोदनकर्ता:
+_____________________          _____________________          _____________________
+Name / नाम:                    Name / नाम:                    Name / नाम:
+Designation / पदनाम:           Designation / पदनाम:           Designation / पदनाम:
+Date / तिथि:                   Date / तिथि:                   Date / तिथि:
+Signature / हस्ताक्षर:          Signature / हस्ताक्षर:          Signature / हस्ताक्षर:
+================================================================================`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 8192,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate SOP');
+      }
+
+      const data = await response.json();
+      const content = data.content?.[0]?.text || '';
+      setGeneratedSOPContent(content);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to generate SOP. Please try again.');
+    } finally {
+      setIsGeneratingSOP(false);
+    }
+  };
+
+  const handleCopyGeneratedSOP = () => {
+    navigator.clipboard.writeText(generatedSOPContent);
+    alert('SOP content copied to clipboard!');
+  };
+
+  // Training Document Generators
+  const handleGenerateTrainingNotice = async () => {
+    const apiKey = getClaudeApiKey();
+    if (!apiKey) {
+      alert('Claude API key not configured. Please add VITE_CLAUDE_API_KEY to your .env file.');
+      return;
+    }
+
+    if (!trainingDate || !trainerName) {
+      alert('Please enter training date and trainer name.');
+      return;
+    }
+
+    setIsGeneratingNotice(true);
+    setGeneratedNotice('');
+
+    try {
+      const prompt = `Generate a professional BILINGUAL (English AND Hindi) training notice/announcement for ${HOSPITAL_INFO.name}.
+
+Hospital: ${HOSPITAL_INFO.name}
+Address: ${HOSPITAL_INFO.address}
+
+Training Details:
+- Topic: ${objective.title} (${objective.code})
+- Date: ${trainingDate}
+- Time: ${trainingTime || 'To be announced'}
+- Venue: ${trainingVenue || 'Hospital Conference Room'}
+- Trainer: ${trainerName}
+- Trainer Designation: ${trainerDesignation || 'Trainer'}
+
+Generate a formal notice on hospital letterhead format with the following structure:
+
+================================================================================
+                              ${HOSPITAL_INFO.name.toUpperCase()}
+                         ${HOSPITAL_INFO.address}
+================================================================================
+
+                    TRAINING NOTICE / प्रशिक्षण सूचना
+                    --------------------------------
+
+Reference No: TRN/${objective.code.replace(/\./g, '/')}/${new Date().getFullYear()}
+Date: [Current Date]
+
+To: All Concerned Staff / सभी संबंधित कर्मचारी
+
+Subject: Training on [Topic] / विषय: [Topic in Hindi] पर प्रशिक्षण
+
+[Body of notice in both English and Hindi explaining the training, its importance, who should attend, what to bring, etc.]
+
+TRAINING DETAILS / प्रशिक्षण विवरण:
+- Date / तिथि: ${trainingDate}
+- Time / समय: ${trainingTime || 'To be announced'}
+- Venue / स्थान: ${trainingVenue || 'Hospital Conference Room'}
+- Trainer / प्रशिक्षक: ${trainerName}, ${trainerDesignation || 'Trainer'}
+
+[Attendance is mandatory / उपस्थिति अनिवार्य है]
+
+================================================================================
+Issued by / जारीकर्ता:
+[Quality Coordinator Name]
+Quality Coordinator
+${HOSPITAL_INFO.name}
+================================================================================`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate notice');
+      }
+
+      const data = await response.json();
+      setGeneratedNotice(data.content?.[0]?.text || '');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to generate notice.');
+    } finally {
+      setIsGeneratingNotice(false);
+    }
+  };
+
+  const handleGenerateAttendanceSheet = async () => {
+    const apiKey = getClaudeApiKey();
+    if (!apiKey) {
+      alert('Claude API key not configured.');
+      return;
+    }
+
+    setIsGeneratingAttendance(true);
+    setGeneratedAttendance('');
+
+    try {
+      const prompt = `Generate a BILINGUAL (English AND Hindi) training attendance sheet for ${HOSPITAL_INFO.name}.
+
+Hospital: ${HOSPITAL_INFO.name}
+Training Topic: ${objective.title} (${objective.code})
+Training Date: ${trainingDate || '[Date]'}
+Trainer: ${trainerName || '[Trainer Name]'}
+
+Create a professional attendance sheet with:
+
+================================================================================
+                              ${HOSPITAL_INFO.name.toUpperCase()}
+                    TRAINING ATTENDANCE SHEET / प्रशिक्षण उपस्थिति पत्रक
+================================================================================
+
+Training Topic / प्रशिक्षण विषय: ${objective.title}
+NABH Code / NABH कोड: ${objective.code}
+Date / तिथि: ${trainingDate || '_____________'}
+Time / समय: ${trainingTime || '_____________'}
+Venue / स्थान: ${trainingVenue || '_____________'}
+Trainer Name / प्रशिक्षक का नाम: ${trainerName || '_____________'}
+Trainer Designation / पदनाम: ${trainerDesignation || '_____________'}
+
+--------------------------------------------------------------------------------
+S.No | Name / नाम | Designation / पदनाम | Department / विभाग | Signature / हस्ताक्षर
+--------------------------------------------------------------------------------
+1    |            |                     |                    |
+2    |            |                     |                    |
+3    |            |                     |                    |
+[Continue for 20 rows]
+
+--------------------------------------------------------------------------------
+Total Attendees / कुल उपस्थित: ___________
+
+TRAINER'S CERTIFICATION / प्रशिक्षक प्रमाणन:
+I certify that the above training was conducted as per schedule.
+मैं प्रमाणित करता/करती हूं कि उपरोक्त प्रशिक्षण निर्धारित समय पर आयोजित किया गया।
+
+Trainer Signature / प्रशिक्षक हस्ताक्षर: _____________________
+Date / तिथि: _____________________
+
+================================================================================`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate attendance sheet');
+      }
+
+      const data = await response.json();
+      setGeneratedAttendance(data.content?.[0]?.text || '');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to generate attendance sheet.');
+    } finally {
+      setIsGeneratingAttendance(false);
+    }
+  };
+
+  const handleGenerateMCQTest = async () => {
+    const apiKey = getClaudeApiKey();
+    if (!apiKey) {
+      alert('Claude API key not configured.');
+      return;
+    }
+
+    setIsGeneratingMCQ(true);
+    setGeneratedMCQ('');
+
+    try {
+      const prompt = `Generate a BILINGUAL (English AND Hindi) Multiple Choice Question (MCQ) test for training evaluation at ${HOSPITAL_INFO.name}.
+
+Hospital: ${HOSPITAL_INFO.name}
+Training Topic: ${objective.title}
+NABH Code: ${objective.code}
+Topic Description: ${objective.description}
+
+Generate ${mcqQuestionCount} MCQ questions to evaluate staff understanding of this topic.
+
+Format:
+
+================================================================================
+                              ${HOSPITAL_INFO.name.toUpperCase()}
+              TRAINING EVALUATION TEST / प्रशिक्षण मूल्यांकन परीक्षा
+================================================================================
+
+Topic / विषय: ${objective.title}
+NABH Code / NABH कोड: ${objective.code}
+Total Questions / कुल प्रश्न: ${mcqQuestionCount}
+Time / समय: 15 minutes / 15 मिनट
+Total Marks / कुल अंक: ${mcqQuestionCount}
+
+Name / नाम: _____________________
+Designation / पदनाम: _____________________
+Department / विभाग: _____________________
+Date / तिथि: _____________________
+
+INSTRUCTIONS / निर्देश:
+- Circle the correct answer / सही उत्तर पर गोला लगाएं
+- Each question carries 1 mark / प्रत्येक प्रश्न 1 अंक का है
+- All questions are compulsory / सभी प्रश्न अनिवार्य हैं
+
+--------------------------------------------------------------------------------
+
+[Generate ${mcqQuestionCount} MCQ questions with 4 options each, in both English and Hindi]
+
+Q1. [Question in English]
+    [Question in Hindi]
+    a) Option A / विकल्प A
+    b) Option B / विकल्प B
+    c) Option C / विकल्प C
+    d) Option D / विकल्प D
+
+[Continue for all questions]
+
+--------------------------------------------------------------------------------
+FOR OFFICIAL USE ONLY / केवल आधिकारिक उपयोग के लिए
+
+Total Score / कुल अंक: _____ / ${mcqQuestionCount}
+Percentage / प्रतिशत: _____%
+Result / परिणाम: PASS / FAIL (Passing: 70%)
+
+Evaluator Signature / मूल्यांकनकर्ता हस्ताक्षर: _____________________
+
+================================================================================
+
+ANSWER KEY / उत्तर कुंजी (Keep Separately):
+[List all correct answers]
+================================================================================`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 8192,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate MCQ test');
+      }
+
+      const data = await response.json();
+      setGeneratedMCQ(data.content?.[0]?.text || '');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to generate MCQ test.');
+    } finally {
+      setIsGeneratingMCQ(false);
+    }
+  };
+
+  const handleCopyContent = (content: string, label: string) => {
+    navigator.clipboard.writeText(content);
+    alert(`${label} copied to clipboard!`);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -502,6 +1015,199 @@ export default function ObjectiveDetail({
             </AccordionDetails>
           </Accordion>
 
+          {/* Training Document Generator Section */}
+          <Accordion sx={{ bgcolor: 'secondary.50', border: '1px solid', borderColor: 'secondary.200' }}>
+            <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon color="secondary">auto_awesome</Icon>
+                <Typography fontWeight={600}>Training Document Generator</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Generate training documents: Notice, Attendance Sheet, and MCQ Test for staff evaluation.
+                </Typography>
+              </Alert>
+
+              {/* Training Details Form */}
+              <Card variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  Training Details (for document generation)
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Training Date"
+                      type="date"
+                      value={trainingDate}
+                      onChange={(e) => setTrainingDate(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Training Time"
+                      placeholder="e.g., 10:00 AM - 12:00 PM"
+                      value={trainingTime}
+                      onChange={(e) => setTrainingTime(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Venue"
+                      placeholder="e.g., Conference Room"
+                      value={trainingVenue}
+                      onChange={(e) => setTrainingVenue(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Trainer Name"
+                      placeholder="e.g., Dr. Sharma"
+                      value={trainerName}
+                      onChange={(e) => setTrainerName(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Trainer Designation"
+                      placeholder="e.g., Infection Control Nurse"
+                      value={trainerDesignation}
+                      onChange={(e) => setTrainerDesignation(e.target.value)}
+                    />
+                  </Grid>
+                </Grid>
+              </Card>
+
+              {/* Generate Buttons */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={isGeneratingNotice ? <CircularProgress size={16} color="inherit" /> : <Icon>campaign</Icon>}
+                  onClick={handleGenerateTrainingNotice}
+                  disabled={isGeneratingNotice}
+                >
+                  {isGeneratingNotice ? 'Generating...' : 'Generate Training Notice'}
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={isGeneratingAttendance ? <CircularProgress size={16} color="inherit" /> : <Icon>people</Icon>}
+                  onClick={handleGenerateAttendanceSheet}
+                  disabled={isGeneratingAttendance}
+                >
+                  {isGeneratingAttendance ? 'Generating...' : 'Generate Attendance Sheet'}
+                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Questions"
+                    value={mcqQuestionCount}
+                    onChange={(e) => setMcqQuestionCount(parseInt(e.target.value) || 10)}
+                    sx={{ width: 100 }}
+                    inputProps={{ min: 5, max: 20 }}
+                  />
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    startIcon={isGeneratingMCQ ? <CircularProgress size={16} color="inherit" /> : <Icon>quiz</Icon>}
+                    onClick={handleGenerateMCQTest}
+                    disabled={isGeneratingMCQ}
+                  >
+                    {isGeneratingMCQ ? 'Generating...' : 'Generate MCQ Test'}
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Generated Training Notice */}
+              {generatedNotice && (
+                <Card variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'primary.50' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>campaign</Icon>
+                      Training Notice (Bilingual)
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" startIcon={<Icon>content_copy</Icon>} onClick={() => handleCopyContent(generatedNotice, 'Training Notice')}>
+                        Copy
+                      </Button>
+                      <Button size="small" color="error" startIcon={<Icon>close</Icon>} onClick={() => setGeneratedNotice('')}>
+                        Close
+                      </Button>
+                    </Box>
+                  </Box>
+                  <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {generatedNotice}
+                  </Box>
+                </Card>
+              )}
+
+              {/* Generated Attendance Sheet */}
+              {generatedAttendance && (
+                <Card variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'success.50' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>people</Icon>
+                      Attendance Sheet (Bilingual)
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" startIcon={<Icon>content_copy</Icon>} onClick={() => handleCopyContent(generatedAttendance, 'Attendance Sheet')}>
+                        Copy
+                      </Button>
+                      <Button size="small" color="error" startIcon={<Icon>close</Icon>} onClick={() => setGeneratedAttendance('')}>
+                        Close
+                      </Button>
+                    </Box>
+                  </Box>
+                  <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {generatedAttendance}
+                  </Box>
+                </Card>
+              )}
+
+              {/* Generated MCQ Test */}
+              {generatedMCQ && (
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'warning.50' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>quiz</Icon>
+                      MCQ Evaluation Test (Bilingual)
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" startIcon={<Icon>content_copy</Icon>} onClick={() => handleCopyContent(generatedMCQ, 'MCQ Test')}>
+                        Copy
+                      </Button>
+                      <Button size="small" color="error" startIcon={<Icon>close</Icon>} onClick={() => setGeneratedMCQ('')}>
+                        Close
+                      </Button>
+                    </Box>
+                  </Box>
+                  <Alert severity="info" sx={{ mb: 1 }}>
+                    <Typography variant="body2">
+                      The answer key is included at the end. Keep it separate from the test paper.
+                    </Typography>
+                  </Alert>
+                  <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider', maxHeight: 400, overflow: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {generatedMCQ}
+                  </Box>
+                </Card>
+              )}
+            </AccordionDetails>
+          </Accordion>
+
           {/* Internal Training Evidence Section */}
           <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
@@ -686,6 +1392,242 @@ export default function ObjectiveDetail({
                   >
                     Add Training Evidence
                   </Button>
+                )}
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+
+          {/* SOP Documents Section */}
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Icon color="primary">description</Icon>
+                <Typography fontWeight={600}>
+                  Standard Operating Procedures (SOPs) ({(objective.sopDocuments || []).length})
+                </Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Upload hospital SOPs (PDF or Word documents) or generate a new SOP using AI if needed.
+                </Typography>
+              </Alert>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Existing SOPs */}
+                {(objective.sopDocuments || []).length > 0 && (
+                  <Grid container spacing={2}>
+                    {(objective.sopDocuments || []).map((sop) => (
+                      <Grid key={sop.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Card variant="outlined">
+                          <Box
+                            sx={{
+                              height: 100,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: sop.fileType === 'pdf' ? 'error.light' : 'primary.light',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => handleViewSOP(sop)}
+                          >
+                            <Icon sx={{ fontSize: 48, color: 'white' }}>
+                              {sop.fileType === 'pdf' ? 'picture_as_pdf' : 'description'}
+                            </Icon>
+                          </Box>
+                          <CardContent sx={{ pb: 1 }}>
+                            <Tooltip title={sop.title}>
+                              <Typography variant="subtitle2" noWrap fontWeight={600}>
+                                {sop.title}
+                              </Typography>
+                            </Tooltip>
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                              <Chip
+                                label={sop.fileType.toUpperCase()}
+                                size="small"
+                                color={sop.fileType === 'pdf' ? 'error' : 'primary'}
+                                sx={{ height: 20, fontSize: 10 }}
+                              />
+                              <Chip
+                                label={`v${sop.version}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: 10 }}
+                              />
+                            </Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                              Effective: {sop.effectiveDate}
+                            </Typography>
+                            {sop.description && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                {sop.description}
+                              </Typography>
+                            )}
+                          </CardContent>
+                          <CardActions sx={{ pt: 0, justifyContent: 'space-between' }}>
+                            <Button
+                              size="small"
+                              startIcon={<Icon>visibility</Icon>}
+                              onClick={() => handleViewSOP(sop)}
+                            >
+                              View
+                            </Button>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteSOP(sop.id)}
+                            >
+                              <Icon fontSize="small">delete</Icon>
+                            </IconButton>
+                          </CardActions>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+
+                {/* Add SOP Form */}
+                {showAddSOP ? (
+                  <Card variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                      Upload SOP Document
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="SOP Title"
+                        placeholder="e.g., Hand Hygiene Protocol"
+                        value={newSOPTitle}
+                        onChange={(e) => setNewSOPTitle(e.target.value)}
+                      />
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 6 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Version"
+                            placeholder="1.0"
+                            value={newSOPVersion}
+                            onChange={(e) => setNewSOPVersion(e.target.value)}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Effective Date"
+                            type="date"
+                            value={newSOPEffectiveDate}
+                            onChange={(e) => setNewSOPEffectiveDate(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        </Grid>
+                      </Grid>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Description (optional)"
+                        placeholder="Brief description of the SOP"
+                        value={newSOPDescription}
+                        onChange={(e) => setNewSOPDescription(e.target.value)}
+                      />
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<Icon>upload</Icon>}
+                          onClick={() => sopFileInputRef.current?.click()}
+                        >
+                          Upload SOP File
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => setShowAddSOP(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                      <input
+                        ref={sopFileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={handleSOPFileUpload}
+                        style={{ display: 'none' }}
+                      />
+                    </Box>
+                  </Card>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Icon>upload_file</Icon>}
+                      onClick={() => setShowAddSOP(true)}
+                    >
+                      Upload SOP
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      startIcon={isGeneratingSOP ? <CircularProgress size={16} color="inherit" /> : <Icon>auto_awesome</Icon>}
+                      onClick={handleGenerateSOP}
+                      disabled={isGeneratingSOP}
+                    >
+                      {isGeneratingSOP ? 'Generating...' : 'Generate SOP with AI'}
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Generated SOP Content */}
+                {generatedSOPContent && (
+                  <Card variant="outlined" sx={{ p: 2, bgcolor: 'success.50' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>auto_awesome</Icon>
+                        Generated SOP (Bilingual)
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          startIcon={<Icon>content_copy</Icon>}
+                          onClick={handleCopyGeneratedSOP}
+                        >
+                          Copy
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          startIcon={<Icon>close</Icon>}
+                          onClick={() => setGeneratedSOPContent('')}
+                        >
+                          Close
+                        </Button>
+                      </Box>
+                    </Box>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        Review and customize the generated SOP. Copy the content and paste it into a Word document for final formatting.
+                      </Typography>
+                    </Alert>
+                    <Box
+                      sx={{
+                        p: 2,
+                        bgcolor: 'background.paper',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        maxHeight: 400,
+                        overflow: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: 'monospace',
+                        fontSize: '0.8rem',
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {generatedSOPContent}
+                    </Box>
+                  </Card>
                 )}
               </Box>
             </AccordionDetails>
