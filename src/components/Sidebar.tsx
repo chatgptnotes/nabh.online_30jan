@@ -11,8 +11,17 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Chip from '@mui/material/Chip';
 import Icon from '@mui/material/Icon';
 import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useNABHStore } from '../store/nabhStore';
 import { getChapterStats } from '../data/nabhData';
+
+const MANAGEMENT_SECTIONS = [
+  { id: 'stationery', label: 'Stationery', icon: 'inventory_2', path: '/stationery', description: 'Hospital forms & documents' },
+  { id: 'committees', label: 'Committees', icon: 'groups', path: '/committees', description: 'Manage hospital committees' },
+  { id: 'kpis', label: 'KPIs', icon: 'analytics', path: '/kpis', description: 'Quality indicators' },
+  { id: 'presentations', label: 'Slide Decks', icon: 'slideshow', path: '/presentations', description: 'Auditor presentations' },
+];
 
 const drawerWidth = 280;
 
@@ -37,16 +46,58 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { chapters, selectedChapter, setSelectedChapter } = useNABHStore();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChapterClick = (chapterId: string) => {
     setSelectedChapter(chapterId);
+    navigate('/');
+    onClose();
+  };
+
+  const handleSectionClick = (path: string) => {
+    setSelectedChapter('');
+    navigate(path);
     onClose();
   };
 
   const drawerContent = (
     <Box>
       <Toolbar />
-      <Box sx={{ p: 2 }}>
+      {/* Management Sections */}
+      <Box sx={{ p: 2, pb: 1 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+          MANAGEMENT
+        </Typography>
+      </Box>
+      <List dense>
+        {MANAGEMENT_SECTIONS.map((section) => (
+          <ListItem key={section.id} disablePadding>
+            <ListItemButton
+              selected={location.pathname === section.path}
+              onClick={() => handleSectionClick(section.path)}
+              sx={{ py: 1 }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <Icon color={location.pathname === section.path ? 'primary' : 'inherit'}>
+                  {section.icon}
+                </Icon>
+              </ListItemIcon>
+              <Tooltip title={section.description} placement="right" arrow>
+                <ListItemText
+                  primary={section.label}
+                  slotProps={{
+                    primary: { fontWeight: location.pathname === section.path ? 600 : 400, fontSize: '0.875rem' },
+                  }}
+                />
+              </Tooltip>
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Divider sx={{ my: 1 }} />
+      {/* Chapters Section */}
+      <Box sx={{ p: 2, pb: 1 }}>
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           CHAPTERS
         </Typography>

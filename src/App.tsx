@@ -12,6 +12,10 @@ import ObjectiveDetailPage from './components/ObjectiveDetailPage';
 import AIEvidenceGenerator from './components/AIEvidenceGenerator';
 import LandingPage from './components/LandingPage';
 import SharedEvidencePage from './components/SharedEvidencePage';
+import StationeryPage from './components/StationeryPage';
+import CommitteesPage from './components/CommitteesPage';
+import KPIsPage from './components/KPIsPage';
+import SlideDeckPage from './components/SlideDeckPage';
 import Footer from './components/Footer';
 import { useNABHStore } from './store/nabhStore';
 
@@ -231,6 +235,10 @@ function MainContent() {
   const { selectedChapter } = useNABHStore();
   const isAIPage = location.pathname === '/ai-generator';
   const isObjectiveDetailPage = location.pathname.startsWith('/objective/');
+  const isStationeryPage = location.pathname === '/stationery';
+  const isCommitteesPage = location.pathname === '/committees';
+  const isKPIsPage = location.pathname === '/kpis';
+  const isPresentationsPage = location.pathname === '/presentations';
   const isLandingPage = location.pathname === '/' && !selectedChapter;
 
   if (isAIPage) {
@@ -239,6 +247,22 @@ function MainContent() {
 
   if (isObjectiveDetailPage) {
     return <ObjectiveDetailPage />;
+  }
+
+  if (isStationeryPage) {
+    return <StationeryPage />;
+  }
+
+  if (isCommitteesPage) {
+    return <CommitteesPage />;
+  }
+
+  if (isKPIsPage) {
+    return <KPIsPage />;
+  }
+
+  if (isPresentationsPage) {
+    return <SlideDeckPage />;
   }
 
   if (isLandingPage) {
@@ -254,8 +278,9 @@ function AppContent() {
   const { selectedChapter } = useNABHStore();
   const isAIPage = location.pathname === '/ai-generator';
   const isObjectiveDetailPage = location.pathname.startsWith('/objective/');
+  const isManagementPage = ['/stationery', '/committees', '/kpis', '/presentations'].includes(location.pathname);
   const isLandingPage = location.pathname === '/' && !selectedChapter;
-  const showSidebar = !isAIPage && !isLandingPage && !isObjectiveDetailPage;
+  const showSidebar = !isAIPage && !isLandingPage && !isObjectiveDetailPage || isManagementPage;
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
