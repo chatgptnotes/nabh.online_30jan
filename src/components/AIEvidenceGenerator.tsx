@@ -1,0 +1,1236 @@
+import { useState, useRef } from 'react';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Icon from '@mui/material/Icon';
+import Divider from '@mui/material/Divider';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormGroup from '@mui/material/FormGroup';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepLabel from '@mui/material/StepLabel';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import Grid from '@mui/material/Grid';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import CardMedia from '@mui/material/CardMedia';
+import { useNABHStore } from '../store/nabhStore';
+import { HOSPITAL_INFO, getNABHCoordinator, NABH_ASSESSOR_PROMPT } from '../config/hospitalConfig';
+import { getGeminiApiKey } from '../lib/supabase';
+
+// Expandable TextField styles
+const expandableTextFieldSx = {
+  '& .MuiInputBase-root': {
+    resize: 'vertical',
+    overflow: 'auto',
+    minHeight: '120px',
+  },
+  '& .MuiInputBase-inputMultiline': {
+    resize: 'vertical',
+    overflow: 'auto !important',
+  },
+};
+
+// Hospital configuration interface
+interface HospitalConfig {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  qualityCoordinator: string;
+  qualityCoordinatorDesignation: string;
+  logo: string;
+}
+
+const nabhCoordinator = getNABHCoordinator();
+
+const defaultHospitalConfig: HospitalConfig = {
+  name: HOSPITAL_INFO.name,
+  address: HOSPITAL_INFO.address,
+  phone: HOSPITAL_INFO.phone,
+  email: HOSPITAL_INFO.email,
+  website: HOSPITAL_INFO.website,
+  qualityCoordinator: nabhCoordinator.name,
+  qualityCoordinatorDesignation: nabhCoordinator.designation,
+  logo: HOSPITAL_INFO.logo,
+};
+
+const defaultListPrompt = NABH_ASSESSOR_PROMPT;
+
+const getContentPrompt = (config: HospitalConfig) => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for ${config.name}.
+
+Generate detailed, ready-to-use evidence content/template for the selected evidence item.
+
+IMPORTANT: Every document MUST include the following structure:
+
+================================================================================
+                              DOCUMENT HEADER
+================================================================================
+                         [HOSPITAL LOGO PLACEHOLDER]
+
+                              ${config.name.toUpperCase()}
+================================================================================
+
+[Document Title - Centered, Bold]
+--------------------------------------------------------------------------------
+Document No: [DOC-XXX-001]     |  Version: 1.0      |  Page: 1 of X
+Effective Date: [DD/MM/YYYY]   |  Review Date: [DD/MM/YYYY]
+Department: [Department Name]  |  Category: [Policy/SOP/Register/Record]
+--------------------------------------------------------------------------------
+
+[MAIN CONTENT OF THE DOCUMENT]
+
+The content should be:
+1. Professional and compliant with NABH standards
+2. Ready to be customized with hospital-specific details
+3. Include all necessary sections, fields, and formatting
+
+If it's a policy or SOP, include:
+- Purpose, Scope, Definitions
+- Procedure/Policy statements with numbered steps
+- Responsibilities matrix
+- References to NABH standards
+- Related documents
+
+If it's a register or record format, include:
+- Column headers in table format
+- Sample entries
+- Instructions for filling
+
+================================================================================
+                              DOCUMENT FOOTER
+================================================================================
+
+PREPARED BY:                    REVIEWED BY:                   APPROVED BY:
+_____________________          _____________________          _____________________
+Name:                          Name:                          Name: ${config.qualityCoordinator}
+Designation:                   Designation:                   Designation: ${config.qualityCoordinatorDesignation}
+Date:                          Date:                          Date:
+Signature:                     Signature:                     Digital Signature: [SIGNED]
+
+--------------------------------------------------------------------------------
+                         [HOSPITAL STAMP PLACEHOLDER]
+
+        This is an official document of ${config.name}.
+        Unauthorized reproduction or distribution is prohibited.
+--------------------------------------------------------------------------------
+${config.name} | ${config.address}
+Phone: ${config.phone} | Email: ${config.email} | Website: ${config.website}
+================================================================================`;
+
+// Visual evidence types for image generation
+const visualEvidenceTypes = [
+  { value: 'signage', label: 'Signage / Display Board', icon: 'signpost' },
+  { value: 'poster', label: 'Awareness Poster', icon: 'image' },
+  { value: 'flyer', label: 'Information Flyer', icon: 'description' },
+  { value: 'banner', label: 'Banner / Standee', icon: 'view_day' },
+  { value: 'infographic', label: 'Infographic', icon: 'analytics' },
+  { value: 'checklist', label: 'Visual Checklist', icon: 'checklist' },
+];
+
+interface EvidenceItem {
+  id: string;
+  text: string;
+  selected: boolean;
+}
+
+interface GeneratedContent {
+  evidenceItem: string;
+  content: string;
+}
+
+interface GeneratedImage {
+  prompt: string;
+  imageUrl: string;
+  type: string;
+}
+
+// Gemini API call for text generation
+async function callGeminiText(apiKey: string, prompt: string, userMessage: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: `${prompt}\n\n${userMessage}` }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 4096,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'Failed to generate content with Gemini');
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// Gemini API call for image generation (using Imagen 3 via Gemini)
+async function callGeminiImage(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"],
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'Failed to generate image with Gemini');
+  }
+
+  const data = await response.json();
+
+  // Extract image from response
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  for (const part of parts) {
+    if (part.inlineData?.mimeType?.startsWith('image/')) {
+      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    }
+  }
+
+  throw new Error('No image generated in response');
+}
+
+export default function AIEvidenceGenerator() {
+  const { chapters } = useNABHStore();
+  const [activeTab, setActiveTab] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
+  const [selectedChapter, setSelectedChapter] = useState('');
+  const [selectedObjective, setSelectedObjective] = useState('');
+  const [description, setDescription] = useState('');
+  const [listPrompt, setListPrompt] = useState(defaultListPrompt);
+  const [hospitalConfig, setHospitalConfig] = useState<HospitalConfig>(() => {
+    const saved = localStorage.getItem('hospital_config');
+    return saved ? JSON.parse(saved) : defaultHospitalConfig;
+  });
+  // API key from environment variable
+  const apiKey = getGeminiApiKey();
+  const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
+  const [generatedContents, setGeneratedContents] = useState<GeneratedContent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  const [error, setError] = useState('');
+  const [contentProgress, setContentProgress] = useState({ current: 0, total: 0 });
+  const [showHospitalConfig, setShowHospitalConfig] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Visual evidence state
+  const [visualType, setVisualType] = useState('signage');
+  const [visualTopic, setVisualTopic] = useState('');
+  const [visualLanguage, setVisualLanguage] = useState('English');
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  const selectedChapterData = chapters.find(c => c.id === selectedChapter);
+  const objectives = selectedChapterData?.objectives || [];
+
+  const steps = ['Generate Evidence List', 'Select Evidences', 'Generate Evidence Content'];
+
+  const handleChapterChange = (chapterId: string) => {
+    setSelectedChapter(chapterId);
+    setSelectedObjective('');
+    setDescription('');
+  };
+
+  const handleObjectiveChange = (objectiveId: string) => {
+    setSelectedObjective(objectiveId);
+    const objective = objectives.find(o => o.id === objectiveId);
+    if (objective) {
+      setDescription(objective.description);
+    }
+  };
+
+  const handleHospitalConfigChange = (field: keyof HospitalConfig, value: string) => {
+    const newConfig = { ...hospitalConfig, [field]: value };
+    setHospitalConfig(newConfig);
+    localStorage.setItem('hospital_config', JSON.stringify(newConfig));
+  };
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      handleHospitalConfigChange('logo', dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const parseEvidenceList = (text: string): EvidenceItem[] => {
+    const lines = text.split('\n').filter(line => line.trim());
+    const items: EvidenceItem[] = [];
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (trimmed.match(/^(\d+[.):]|-|\*|•)/)) {
+        items.push({
+          id: `evidence-${index}`,
+          text: trimmed,
+          selected: false,
+        });
+      }
+    });
+
+    return items;
+  };
+
+  const handleGenerateList = async () => {
+    if (!description.trim()) {
+      setError('Please enter the objective element description');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setEvidenceItems([]);
+    setGeneratedContents([]);
+
+    try {
+      const generatedText = await callGeminiText(
+        apiKey,
+        listPrompt,
+        `Objective Element Description:\n\n${description}`
+      );
+
+      const items = parseEvidenceList(generatedText);
+      setEvidenceItems(items);
+
+      if (items.length > 0) {
+        setActiveStep(1);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while generating evidence list');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleEvidence = (id: string) => {
+    setEvidenceItems(items =>
+      items.map(item =>
+        item.id === id ? { ...item, selected: !item.selected } : item
+      )
+    );
+  };
+
+  const handleSelectAll = () => {
+    const allSelected = evidenceItems.every(item => item.selected);
+    setEvidenceItems(items =>
+      items.map(item => ({ ...item, selected: !allSelected }))
+    );
+  };
+
+  const selectedCount = evidenceItems.filter(item => item.selected).length;
+
+  const handleGenerateContent = async () => {
+    const selectedItems = evidenceItems.filter(item => item.selected);
+
+    if (selectedItems.length === 0) {
+      setError('Please select at least one evidence item');
+      return;
+    }
+
+    setIsGeneratingContent(true);
+    setError('');
+    setGeneratedContents([]);
+    setContentProgress({ current: 0, total: selectedItems.length });
+    setActiveStep(2);
+
+    const contentPrompt = getContentPrompt(hospitalConfig);
+    const contents: GeneratedContent[] = [];
+
+    for (let i = 0; i < selectedItems.length; i++) {
+      const item = selectedItems[i];
+      setContentProgress({ current: i + 1, total: selectedItems.length });
+
+      try {
+        const content = await callGeminiText(
+          apiKey,
+          contentPrompt,
+          `Objective Element: ${description}\n\nEvidence Item to Generate:\n${item.text}\n\nGenerate complete, ready-to-use content/template for this evidence with the hospital header, footer, signature and stamp sections as specified.`
+        );
+
+        contents.push({
+          evidenceItem: item.text,
+          content,
+        });
+
+        setGeneratedContents([...contents]);
+      } catch (err) {
+        contents.push({
+          evidenceItem: item.text,
+          content: `Error generating content: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        });
+        setGeneratedContents([...contents]);
+      }
+    }
+
+    setIsGeneratingContent(false);
+  };
+
+  const handleGenerateVisualEvidence = async () => {
+    if (!visualTopic.trim()) {
+      setError('Please enter the topic for visual evidence');
+      return;
+    }
+
+    setIsGeneratingImage(true);
+    setError('');
+
+    const typeLabel = visualEvidenceTypes.find(t => t.value === visualType)?.label || visualType;
+
+    const imagePrompt = `Create a professional hospital ${typeLabel.toLowerCase()} for ${hospitalConfig.name}.
+
+Topic: ${visualTopic}
+Language: ${visualLanguage}
+
+Requirements:
+- Professional healthcare/hospital design
+- Clean, readable layout
+- Use hospital colors (blue and red theme)
+- Include relevant medical/healthcare icons
+- Text should be clear and legible
+- Suitable for printing and display in a hospital setting
+- NABH compliant healthcare messaging
+- Include hospital name: ${hospitalConfig.name}
+- Address: ${hospitalConfig.address}
+
+Style: Modern, professional healthcare design with clear typography`;
+
+    try {
+      const imageUrl = await callGeminiImage(apiKey, imagePrompt);
+
+      setGeneratedImages(prev => [
+        {
+          prompt: visualTopic,
+          imageUrl,
+          type: typeLabel,
+        },
+        ...prev,
+      ]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate image. Please try again.');
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleDownloadImage = (imageUrl: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `${filename}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyContent = (content: string) => {
+    navigator.clipboard.writeText(content);
+  };
+
+  const handleCopyAllContents = () => {
+    const allContent = generatedContents
+      .map(gc => `=== ${gc.evidenceItem} ===\n\n${gc.content}`)
+      .join('\n\n---\n\n');
+    navigator.clipboard.writeText(allContent);
+  };
+
+  const handleReset = () => {
+    setActiveStep(0);
+    setEvidenceItems([]);
+    setGeneratedContents([]);
+    setError('');
+  };
+
+  const handleBackToSelection = () => {
+    setActiveStep(1);
+    setGeneratedContents([]);
+  };
+
+  return (
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <Icon color="primary" sx={{ fontSize: 32 }}>description</Icon>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h5" fontWeight={600}>
+              Evidence Document Creator
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Create professional NABH evidence documents for {hospitalConfig.name}
+            </Typography>
+          </Box>
+          <Chip
+            icon={<Icon>verified</Icon>}
+            label="NABH Compliant"
+            color="success"
+            variant="outlined"
+          />
+          <Button
+            variant="outlined"
+            startIcon={<Icon>settings</Icon>}
+            onClick={() => setShowHospitalConfig(!showHospitalConfig)}
+          >
+            Hospital Settings
+          </Button>
+        </Box>
+
+        {/* Tabs for Document vs Visual Evidence */}
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab
+            icon={<Icon>description</Icon>}
+            iconPosition="start"
+            label="Document Evidence"
+          />
+          <Tab
+            icon={<Icon>image</Icon>}
+            iconPosition="start"
+            label="Visual Evidence (Signage, Posters, Flyers)"
+          />
+        </Tabs>
+
+        {/* Hospital Configuration */}
+        {showHospitalConfig && (
+          <Card variant="outlined" sx={{ mb: 3, bgcolor: 'primary.50' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Icon color="primary">business</Icon>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Hospital Branding Configuration
+                </Typography>
+              </Box>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Hospital Name"
+                    value={hospitalConfig.name}
+                    onChange={(e) => handleHospitalConfigChange('name', e.target.value)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Quality Coordinator Name"
+                    value={hospitalConfig.qualityCoordinator}
+                    onChange={(e) => handleHospitalConfigChange('qualityCoordinator', e.target.value)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Quality Coordinator Designation"
+                    value={hospitalConfig.qualityCoordinatorDesignation}
+                    onChange={(e) => handleHospitalConfigChange('qualityCoordinatorDesignation', e.target.value)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Phone"
+                    value={hospitalConfig.phone}
+                    onChange={(e) => handleHospitalConfigChange('phone', e.target.value)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Hospital Address"
+                    value={hospitalConfig.address}
+                    onChange={(e) => handleHospitalConfigChange('address', e.target.value)}
+                    multiline
+                    rows={2}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Email"
+                    value={hospitalConfig.email}
+                    onChange={(e) => handleHospitalConfigChange('email', e.target.value)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Website"
+                    value={hospitalConfig.website}
+                    onChange={(e) => handleHospitalConfigChange('website', e.target.value)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Icon>upload</Icon>}
+                      onClick={() => logoInputRef.current?.click()}
+                    >
+                      Upload Hospital Logo
+                    </Button>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      style={{ display: 'none' }}
+                    />
+                    {hospitalConfig.logo && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <img
+                          src={hospitalConfig.logo}
+                          alt="Hospital Logo"
+                          style={{ height: 40, objectFit: 'contain' }}
+                        />
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleHospitalConfigChange('logo', '')}
+                        >
+                          <Icon fontSize="small">delete</Icon>
+                        </IconButton>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tab 0: Document Evidence */}
+        {activeTab === 0 && (
+          <>
+            {/* Stepper */}
+            <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Step 1: Generate Evidence List */}
+            {activeStep === 0 && (
+              <>
+                {/* Objective Selection */}
+                <Card variant="outlined" sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <Icon color="primary">list_alt</Icon>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Select Objective Element (Optional)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Chapter</InputLabel>
+                        <Select
+                          value={selectedChapter}
+                          label="Chapter"
+                          onChange={(e) => handleChapterChange(e.target.value)}
+                        >
+                          <MenuItem value="">Select Chapter</MenuItem>
+                          {chapters.map((chapter) => (
+                            <MenuItem key={chapter.id} value={chapter.id}>
+                              {chapter.code} - {chapter.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 300, flexGrow: 1 }}>
+                        <InputLabel>Objective Element</InputLabel>
+                        <Select
+                          value={selectedObjective}
+                          label="Objective Element"
+                          onChange={(e) => handleObjectiveChange(e.target.value)}
+                          disabled={!selectedChapter}
+                        >
+                          <MenuItem value="">Select Objective</MenuItem>
+                          {objectives.map((obj) => (
+                            <MenuItem key={obj.id} value={obj.id}>
+                              {obj.code} - {obj.title}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                {/* Description Input */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Icon color="primary">description</Icon>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Objective Element Description
+                    </Typography>
+                    {selectedObjective && (
+                      <Chip label="Auto-filled" size="small" color="success" variant="outlined" />
+                    )}
+                  </Box>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter or paste the NABH objective element description here..."
+                    sx={expandableTextFieldSx}
+                  />
+                </Box>
+
+                {/* List Prompt Input */}
+                <Accordion sx={{ mb: 3 }}>
+                  <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Icon color="secondary">psychology</Icon>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        AI Prompt (Advanced)
+                      </Typography>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={4}
+                      value={listPrompt}
+                      onChange={(e) => setListPrompt(e.target.value)}
+                      sx={expandableTextFieldSx}
+                    />
+                    <Button
+                      size="small"
+                      startIcon={<Icon>refresh</Icon>}
+                      onClick={() => setListPrompt(defaultListPrompt)}
+                      sx={{ mt: 1 }}
+                    >
+                      Reset to Default
+                    </Button>
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Generate Button */}
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <Icon>list_alt</Icon>}
+                    onClick={handleGenerateList}
+                    disabled={isLoading || !description.trim()}
+                    sx={{ px: 4, py: 1.5 }}
+                  >
+                    {isLoading ? 'Creating Evidence List...' : 'Step 1: Create Evidence List'}
+                  </Button>
+                </Box>
+              </>
+            )}
+
+            {/* Step 2: Select Evidences */}
+            {activeStep === 1 && (
+              <>
+                <Card variant="outlined" sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Icon color="primary">checklist</Icon>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          Select Evidences to Generate Content For
+                        </Typography>
+                        <Chip
+                          label={`${selectedCount} of ${evidenceItems.length} selected`}
+                          size="small"
+                          color={selectedCount > 0 ? 'primary' : 'default'}
+                        />
+                      </Box>
+                      <Button
+                        size="small"
+                        startIcon={<Icon>select_all</Icon>}
+                        onClick={handleSelectAll}
+                      >
+                        {evidenceItems.every(item => item.selected) ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    </Box>
+
+                    <Paper variant="outlined" sx={{ p: 2, maxHeight: 400, overflow: 'auto', bgcolor: 'grey.50' }}>
+                      <FormGroup>
+                        {evidenceItems.map((item) => (
+                          <FormControlLabel
+                            key={item.id}
+                            control={
+                              <Checkbox
+                                checked={item.selected}
+                                onChange={() => handleToggleEvidence(item.id)}
+                                color="primary"
+                              />
+                            }
+                            label={
+                              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                                {item.text}
+                              </Typography>
+                            }
+                            sx={{
+                              alignItems: 'flex-start',
+                              mb: 1,
+                              p: 1,
+                              borderRadius: 1,
+                              bgcolor: item.selected ? 'primary.50' : 'transparent',
+                              '&:hover': { bgcolor: item.selected ? 'primary.100' : 'grey.100' },
+                            }}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Paper>
+                  </CardContent>
+                </Card>
+
+                {/* Branding Preview */}
+                <Card variant="outlined" sx={{ mb: 3, bgcolor: 'success.50' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Icon color="success">verified</Icon>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Document Branding Preview
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Each generated document will include:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                      <Chip icon={<Icon>image</Icon>} label={`${hospitalConfig.name} Logo`} size="small" />
+                      <Chip icon={<Icon>location_on</Icon>} label="Hospital Address in Footer" size="small" />
+                      <Chip icon={<Icon>draw</Icon>} label={`Digital Signature: ${hospitalConfig.qualityCoordinator}`} size="small" />
+                      <Chip icon={<Icon>verified</Icon>} label="Hospital Attestation Stamp" size="small" />
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Icon>arrow_back</Icon>}
+                    onClick={handleReset}
+                  >
+                    Back to Start
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<Icon>auto_awesome</Icon>}
+                    onClick={handleGenerateContent}
+                    disabled={selectedCount === 0}
+                    sx={{ px: 4, py: 1.5 }}
+                  >
+                    Step 2: Generate Branded Documents ({selectedCount})
+                  </Button>
+                </Box>
+              </>
+            )}
+
+            {/* Step 3: Generated Content */}
+            {activeStep === 2 && (
+              <>
+                {isGeneratingContent && (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <CircularProgress size={48} sx={{ mb: 2 }} />
+                    <Typography variant="h6">
+                      Creating Documents...
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {contentProgress.current} of {contentProgress.total} completed
+                    </Typography>
+                  </Box>
+                )}
+
+                {generatedContents.length > 0 && (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="h6" fontWeight={600}>
+                        <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>description</Icon>
+                        Evidence Documents ({generatedContents.length})
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          startIcon={<Icon>content_copy</Icon>}
+                          onClick={handleCopyAllContents}
+                        >
+                          Copy All
+                        </Button>
+                      </Box>
+                    </Box>
+
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        All documents created with {hospitalConfig.name} branding. Review and customize as needed.
+                      </Typography>
+                    </Alert>
+
+                    {generatedContents.map((gc, index) => (
+                      <Accordion key={index} defaultExpanded={index === 0} sx={{ mb: 2 }}>
+                        <AccordionSummary expandIcon={<Icon>expand_more</Icon>}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', pr: 2 }}>
+                            <Chip label={index + 1} size="small" color="primary" />
+                            <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+                              {gc.evidenceItem.substring(0, 100)}...
+                            </Typography>
+                            <Tooltip title="Copy">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyContent(gc.content);
+                                }}
+                              >
+                                <Icon fontSize="small">content_copy</Icon>
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Box sx={{ mb: 2, p: 2, bgcolor: 'primary.50', borderRadius: 1, textAlign: 'center' }}>
+                            {hospitalConfig.logo ? (
+                              <img
+                                src={hospitalConfig.logo}
+                                alt="Hospital Logo"
+                                style={{ height: 60, objectFit: 'contain', marginBottom: 8 }}
+                              />
+                            ) : (
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
+                                <Icon color="primary">local_hospital</Icon>
+                                <Typography variant="body2" color="text.secondary">[Hospital Logo]</Typography>
+                              </Box>
+                            )}
+                            <Typography variant="h6" fontWeight={600}>{hospitalConfig.name}</Typography>
+                          </Box>
+                          <Paper
+                            variant="outlined"
+                            sx={{
+                              p: 2,
+                              bgcolor: 'grey.50',
+                              maxHeight: 500,
+                              overflow: 'auto',
+                              whiteSpace: 'pre-wrap',
+                              fontFamily: 'monospace',
+                              fontSize: '0.875rem',
+                              lineHeight: 1.6,
+                            }}
+                          >
+                            {gc.content}
+                          </Paper>
+                          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1, textAlign: 'center' }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {hospitalConfig.address}
+                            </Typography>
+                            <Divider sx={{ my: 1 }} />
+                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                              <Chip
+                                size="small"
+                                icon={<Icon fontSize="small">draw</Icon>}
+                                label={`Signed: ${hospitalConfig.qualityCoordinator}`}
+                                variant="outlined"
+                              />
+                              <Chip
+                                size="small"
+                                icon={<Icon fontSize="small">verified</Icon>}
+                                label="Official Hospital Stamp"
+                                color="primary"
+                                variant="outlined"
+                              />
+                            </Box>
+                          </Box>
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
+
+                    {/* Action Buttons */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Icon>arrow_back</Icon>}
+                        onClick={handleBackToSelection}
+                      >
+                        Back to Selection
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Icon>refresh</Icon>}
+                        onClick={handleReset}
+                      >
+                        Start Over
+                      </Button>
+                    </Box>
+                  </>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {/* Tab 1: Visual Evidence */}
+        {activeTab === 1 && (
+          <Box>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                Create professional signages, posters, flyers, and other visual evidences for {hospitalConfig.name}.
+              </Typography>
+            </Alert>
+
+            <Grid container spacing={3}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                      <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>add_photo_alternate</Icon>
+                      Generate Visual Evidence
+                    </Typography>
+
+                    <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                      <InputLabel>Visual Type</InputLabel>
+                      <Select
+                        value={visualType}
+                        label="Visual Type"
+                        onChange={(e) => setVisualType(e.target.value)}
+                      >
+                        {visualEvidenceTypes.map((type) => (
+                          <MenuItem key={type.value} value={type.value}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Icon fontSize="small">{type.icon}</Icon>
+                              {type.label}
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Topic / Content"
+                      value={visualTopic}
+                      onChange={(e) => setVisualTopic(e.target.value)}
+                      placeholder="e.g., Hand Hygiene Steps, Fire Safety Instructions, Patient Rights..."
+                      multiline
+                      rows={3}
+                      sx={{ mb: 2 }}
+                    />
+
+                    <FormControl fullWidth size="small" sx={{ mb: 3 }}>
+                      <InputLabel>Language</InputLabel>
+                      <Select
+                        value={visualLanguage}
+                        label="Language"
+                        onChange={(e) => setVisualLanguage(e.target.value)}
+                      >
+                        <MenuItem value="English">English</MenuItem>
+                        <MenuItem value="Hindi">Hindi</MenuItem>
+                        <MenuItem value="Marathi">Marathi</MenuItem>
+                        <MenuItem value="English and Hindi">English and Hindi (Bilingual)</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      size="large"
+                      startIcon={isGeneratingImage ? <CircularProgress size={20} color="inherit" /> : <Icon>auto_awesome</Icon>}
+                      onClick={handleGenerateVisualEvidence}
+                      disabled={isGeneratingImage || !visualTopic.trim()}
+                    >
+                      {isGeneratingImage ? 'Generating Image...' : 'Generate Visual Evidence'}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Templates */}
+                <Card variant="outlined" sx={{ mt: 2 }}>
+                  <CardContent>
+                    <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                      Quick Templates
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {[
+                        'Hand Hygiene - 5 Moments',
+                        'Fire Safety Instructions',
+                        'Patient Rights',
+                        'Biomedical Waste Segregation',
+                        'Code Blue Protocol',
+                        'Visitor Guidelines',
+                        'No Smoking Zone',
+                        'Emergency Exit',
+                        'Infection Control',
+                        'Fall Prevention',
+                      ].map((template) => (
+                        <Chip
+                          key={template}
+                          label={template}
+                          size="small"
+                          onClick={() => setVisualTopic(template)}
+                          sx={{ cursor: 'pointer' }}
+                        />
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Card variant="outlined" sx={{ height: '100%', minHeight: 400 }}>
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                      <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>collections</Icon>
+                      Generated Images ({generatedImages.length})
+                    </Typography>
+
+                    {generatedImages.length === 0 ? (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: 300,
+                          bgcolor: 'grey.50',
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Icon sx={{ fontSize: 64, color: 'grey.400', mb: 2 }}>image</Icon>
+                        <Typography color="text.secondary">
+                          Generated images will appear here
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box sx={{ maxHeight: 500, overflow: 'auto' }}>
+                        {generatedImages.map((img, index) => (
+                          <Card key={index} variant="outlined" sx={{ mb: 2 }}>
+                            <CardMedia
+                              component="img"
+                              image={img.imageUrl}
+                              alt={img.prompt}
+                              sx={{ maxHeight: 300, objectFit: 'contain', bgcolor: 'grey.100' }}
+                            />
+                            <CardContent sx={{ py: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box>
+                                  <Chip label={img.type} size="small" color="primary" sx={{ mr: 1 }} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {img.prompt}
+                                  </Typography>
+                                </Box>
+                                <Tooltip title="Download">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDownloadImage(img.imageUrl, `${img.type}-${img.prompt.substring(0, 20)}`)}
+                                  >
+                                    <Icon fontSize="small">download</Icon>
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <Alert severity="error" sx={{ mt: 3 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
+      </Paper>
+
+      {/* Instructions Card */}
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight={600} gutterBottom>
+          <Icon sx={{ verticalAlign: 'middle', mr: 1 }}>help_outline</Icon>
+          How to Use
+        </Typography>
+        <Box component="ol" sx={{ pl: 2, '& li': { mb: 1 } }}>
+          <li>Click "Hospital Settings" to configure branding (name, logo, address, quality coordinator)</li>
+          <li><strong>Document Evidence:</strong> Create SOPs, policies, registers with hospital branding</li>
+          <li><strong>Visual Evidence:</strong> Create signages, posters, flyers for display</li>
+          <li>Review and customize the generated content before printing or filing</li>
+        </Box>
+        <Alert severity="success" sx={{ mt: 2 }}>
+          <Typography variant="body2">
+            All documents are professionally formatted with {hospitalConfig.name} branding and NABH compliance standards.
+          </Typography>
+        </Alert>
+      </Paper>
+    </Box>
+  );
+}

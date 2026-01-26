@@ -1,5 +1,6 @@
-import type { Chapter, ObjectiveElement, ElementCategory } from '../types/nabh';
+import type { Chapter, ObjectiveElement, ElementCategory, YouTubeVideo } from '../types/nabh';
 import { CHAPTER_NAMES, CHAPTER_TYPES } from '../types/nabh';
+import { getLearningResource } from './nabhLearningResources';
 
 /**
  * NABH SHCO (Small Healthcare Organizations) Standards - 3rd Edition
@@ -118,6 +119,7 @@ const excelPriorityMap: Record<string, { priority: string; assignee: string; sta
 
 // Helper to create objective element with SHCO 3rd Edition data
 // Automatically applies priority, assignee, and status from Excel if available
+// Also loads Hindi explanations and YouTube videos from learning resources
 const obj = (
   code: string,
   description: string = '',
@@ -134,15 +136,30 @@ const obj = (
   const finalAssignee = excelData?.assignee || assignee;
   const finalStatus = excelData?.status || status;
 
+  // Get learning resources (Hindi explanation and YouTube videos)
+  const learningResource = getLearningResource(code);
+  const youtubeVideos: YouTubeVideo[] = learningResource.youtubeVideos.map((video, index) => ({
+    id: `${code.toLowerCase().replace(/\./g, '-')}-video-${index}`,
+    title: video.title,
+    url: video.url,
+    description: video.description,
+    addedBy: 'NABH Training Team',
+    addedAt: new Date().toISOString(),
+  }));
+
   return {
     id: code.toLowerCase().replace(/\./g, '-').replace(/\s/g, '-'),
     code,
     title: description.substring(0, 100) + (description.length > 100 ? '...' : ''),
     description,
+    hindiExplanation: learningResource.hindiExplanation,
     category,
     isCore: category === 'Core',
     evidencesList,
     evidenceLinks,
+    evidenceFiles: [],
+    youtubeVideos,
+    trainingMaterials: [],
     priority: finalPriority as ObjectiveElement['priority'],
     assignee: finalAssignee,
     status: finalStatus as ObjectiveElement['status'],

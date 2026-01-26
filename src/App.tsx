@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { ThemeProvider, createTheme, alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -7,29 +8,214 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ObjectiveList from './components/ObjectiveList';
+import AIEvidenceGenerator from './components/AIEvidenceGenerator';
+import LandingPage from './components/LandingPage';
 import Footer from './components/Footer';
 import { useNABHStore } from './store/nabhStore';
 
+// Modern theme with Hope Hospital colors (from logo: red and blue)
 const theme = createTheme({
   palette: {
+    mode: 'light',
     primary: {
-      main: '#1976d2',
+      main: '#1565C0', // Deep blue from logo
+      light: '#42A5F5',
+      dark: '#0D47A1',
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#9c27b0',
+      main: '#D32F2F', // Red from logo
+      light: '#EF5350',
+      dark: '#B71C1C',
+      contrastText: '#ffffff',
+    },
+    success: {
+      main: '#2E7D32',
+      light: '#4CAF50',
+      dark: '#1B5E20',
+    },
+    warning: {
+      main: '#ED6C02',
+      light: '#FF9800',
+      dark: '#E65100',
+    },
+    error: {
+      main: '#D32F2F',
+      light: '#EF5350',
+      dark: '#C62828',
     },
     background: {
-      default: '#f5f5f5',
+      default: '#F8FAFC',
+      paper: '#FFFFFF',
     },
+    text: {
+      primary: '#1E293B',
+      secondary: '#64748B',
+    },
+    divider: '#E2E8F0',
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 700,
+      letterSpacing: '-0.02em',
+    },
+    h2: {
+      fontWeight: 700,
+      letterSpacing: '-0.01em',
+    },
+    h3: {
+      fontWeight: 600,
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    button: {
+      fontWeight: 600,
+    },
   },
+  shape: {
+    borderRadius: 12,
+  },
+  shadows: [
+    'none',
+    '0px 1px 2px rgba(0, 0, 0, 0.05)',
+    '0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06)',
+    '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    '0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  ],
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
+          borderRadius: 8,
+          padding: '8px 16px',
+          fontWeight: 600,
+          boxShadow: 'none',
+          '&:hover': {
+            boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+          },
+        },
+        contained: {
+          '&:hover': {
+            transform: 'translateY(-1px)',
+            transition: 'all 0.2s ease-in-out',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+          transition: 'all 0.3s ease-in-out',
+          '&:hover': {
+            boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.12)',
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+        rounded: {
+          borderRadius: 16,
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          fontWeight: 500,
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 8,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)',
+            },
+            '&.Mui-focused': {
+              boxShadow: `0px 0px 0px 3px ${alpha('#1565C0', 0.2)}`,
+            },
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.08)',
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          borderRight: '1px solid #E2E8F0',
+        },
+      },
+    },
+    MuiTableHead: {
+      styleOverrides: {
+        root: {
+          '& .MuiTableCell-head': {
+            fontWeight: 600,
+            backgroundColor: '#F8FAFC',
+          },
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          transition: 'background-color 0.2s ease-in-out',
+          '&:hover': {
+            backgroundColor: '#F8FAFC',
+          },
+        },
+      },
+    },
+    MuiLinearProgress: {
+      styleOverrides: {
+        root: {
+          borderRadius: 4,
+          height: 8,
         },
       },
     },
@@ -38,36 +224,78 @@ const theme = createTheme({
 
 const drawerWidth = 280;
 
-function App() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+function MainContent() {
+  const location = useLocation();
   const { selectedChapter } = useNABHStore();
+  const isAIPage = location.pathname === '/ai-generator';
+  const isLandingPage = location.pathname === '/' && !selectedChapter;
+
+  if (isAIPage) {
+    return <AIEvidenceGenerator />;
+  }
+
+  if (isLandingPage) {
+    return <LandingPage />;
+  }
+
+  return selectedChapter ? <ObjectiveList /> : <Dashboard />;
+}
+
+function AppContent() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const { selectedChapter } = useNABHStore();
+  const isAIPage = location.pathname === '/ai-generator';
+  const isLandingPage = location.pathname === '/' && !selectedChapter;
+  const showSidebar = !isAIPage && !isLandingPage;
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <Header onMenuClick={handleDrawerToggle} />
-        <Sidebar mobileOpen={mobileOpen} onClose={handleDrawerToggle} />
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Header onMenuClick={handleDrawerToggle} />
+      {showSidebar && <Sidebar mobileOpen={mobileOpen} onClose={handleDrawerToggle} />}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          width: showSidebar ? { sm: `calc(100% - ${drawerWidth}px)` } : '100%',
+          transition: 'all 0.3s ease-in-out',
+        }}
+      >
+        <Toolbar />
         <Box
-          component="main"
           sx={{
+            p: isLandingPage ? 0 : 3,
             flexGrow: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            animation: 'fadeIn 0.5s ease-in-out',
+            '@keyframes fadeIn': {
+              from: { opacity: 0, transform: 'translateY(10px)' },
+              to: { opacity: 1, transform: 'translateY(0)' },
+            },
           }}
         >
-          <Toolbar />
-          <Box sx={{ p: 3, flexGrow: 1 }}>
-            {selectedChapter ? <ObjectiveList /> : <Dashboard />}
-          </Box>
-          <Footer />
+          <MainContent />
         </Box>
+        {!isLandingPage && <Footer />}
       </Box>
+    </Box>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
+      </BrowserRouter>
     </ThemeProvider>
   );
 }

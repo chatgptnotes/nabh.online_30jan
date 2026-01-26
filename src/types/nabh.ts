@@ -3,15 +3,51 @@ export type Status = 'Not started' | 'In progress' | 'Blocked' | 'Completed' | '
 export type ElementCategory = 'Core' | 'Commitment' | 'Achievement' | 'Excellence';
 export type ChapterType = 'Patient Centered' | 'Organization Centered';
 
+export interface EvidenceFile {
+  id: string;
+  name: string;
+  type: 'image' | 'pdf';
+  size: number;
+  dataUrl: string;              // Base64 data URL for local storage
+  uploadedAt: string;
+}
+
+export interface YouTubeVideo {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+  addedBy?: string;
+  addedAt?: string;
+}
+
+export interface TrainingMaterial {
+  id: string;
+  type: 'video' | 'photo' | 'document' | 'certificate';
+  title: string;
+  description?: string;
+  fileUrl?: string;
+  dataUrl?: string;              // Base64 for locally stored files
+  thumbnailUrl?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  trainingDate?: string;
+  participants?: string[];
+}
+
 export interface ObjectiveElement {
   id: string;
   code: string;
   title: string;
   description: string;          // NABH SHCO 3rd Edition description
+  hindiExplanation: string;     // Hindi explanation for staff
   category: ElementCategory;    // Core, Commitment, Achievement, Excellence
   isCore: boolean;              // Quick check for core elements
   evidencesList: string;
   evidenceLinks: string;
+  evidenceFiles: EvidenceFile[]; // Uploaded evidence files (images, PDFs)
+  youtubeVideos: YouTubeVideo[]; // YouTube training videos
+  trainingMaterials: TrainingMaterial[]; // Internal training evidence
   priority: Priority;
   assignee: string;
   status: Status;

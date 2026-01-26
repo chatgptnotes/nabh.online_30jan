@@ -152,9 +152,26 @@ export default function ObjectiveList() {
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>
-                    {obj.title || obj.evidencesList || '-'}
-                  </Typography>
+                  <Tooltip
+                    title={obj.title || obj.evidencesList || '-'}
+                    arrow
+                    placement="top-start"
+                    enterDelay={300}
+                    slotProps={{
+                      tooltip: {
+                        sx: {
+                          maxWidth: 500,
+                          fontSize: '0.875rem',
+                          lineHeight: 1.5,
+                          padding: '8px 12px',
+                        },
+                      },
+                    }}
+                  >
+                    <Typography variant="body2" noWrap sx={{ maxWidth: 300, cursor: 'help' }}>
+                      {obj.title || obj.evidencesList || '-'}
+                    </Typography>
+                  </Tooltip>
                 </TableCell>
                 <TableCell>
                   {obj.priority && (

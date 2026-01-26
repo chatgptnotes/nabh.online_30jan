@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
 import Chip from '@mui/material/Chip';
 import Icon from '@mui/material/Icon';
+import Tooltip from '@mui/material/Tooltip';
 import { useNABHStore } from '../store/nabhStore';
 import { getChapterStats } from '../data/nabhData';
 
@@ -68,12 +69,29 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                       {chapterIcons[chapter.code] || 'folder'}
                     </Icon>
                   </ListItemIcon>
-                  <ListItemText
-                    primary={chapter.code}
-                    secondary={chapter.fullName}
-                    primaryTypographyProps={{ fontWeight: 600 }}
-                    secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-                  />
+                  <Tooltip
+                    title={chapter.fullName}
+                    arrow
+                    placement="right"
+                    enterDelay={300}
+                    slotProps={{
+                      tooltip: {
+                        sx: {
+                          maxWidth: 300,
+                          fontSize: '0.75rem',
+                        },
+                      },
+                    }}
+                  >
+                    <ListItemText
+                      primary={chapter.code}
+                      secondary={chapter.fullName}
+                      slotProps={{
+                        primary: { fontWeight: 600 },
+                        secondary: { variant: 'caption', noWrap: true },
+                      }}
+                    />
+                  </Tooltip>
                 </Box>
                 <Box sx={{ width: '100%', px: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
