@@ -653,13 +653,12 @@ Use EXACTLY this HTML template structure (fill in the content sections):
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>[Document Title] - Dr. Murali's Hope Hospital</title>
+  <title>[Document Title] - Hope Hospital</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px; line-height: 1.6; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
-    .header { text-align: center; border-bottom: 3px solid #1565C0; padding-bottom: 15px; margin-bottom: 20px; }
-    .logo { width: 180px; height: auto; margin: 0 auto 10px; display: block; }
-    .tagline { font-size: 11px; color: #666; font-style: italic; margin-bottom: 5px; }
+    .header { text-align: center; border-bottom: 3px solid #1565C0; padding-bottom: 10px; margin-bottom: 20px; }
+    .logo { width: 180px; height: auto; margin: 0 auto 5px; display: block; }
     .hospital-address { font-size: 11px; color: #666; }
     .doc-title { background: linear-gradient(135deg, #1565C0, #0D47A1); color: white; padding: 12px; font-size: 16px; font-weight: bold; text-align: center; margin: 20px 0; border-radius: 5px; }
     .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
@@ -693,9 +692,8 @@ Use EXACTLY this HTML template structure (fill in the content sections):
 </head>
 <body>
   <div class="header">
-    <img src="${logoUrl}" alt="Dr. Murali's Hope Hospital" class="logo" onerror="this.style.display='none'">
-    <div class="tagline">Assured | Committed | Proficient</div>
-    <div class="hospital-address">${hospitalConfig.address} | Phone: ${hospitalConfig.phone}</div>
+    <img src="${logoUrl}" alt="Hope Hospital" class="logo" onerror="this.style.display='none'">
+    <div class="hospital-address">${hospitalConfig.address} | Phone: +91-9373111709</div>
   </div>
 
   <div class="doc-title">[DOCUMENT TITLE - Replace with appropriate title]</div>
@@ -780,8 +778,8 @@ Use EXACTLY this HTML template structure (fill in the content sections):
   </div>
 
   <div class="footer">
-    <strong>Dr. Murali's Hope Hospital</strong> | ${hospitalConfig.address}<br>
-    Phone: ${hospitalConfig.phone} | Email: ${hospitalConfig.email} | Website: ${hospitalConfig.website}<br>
+    <strong>Hope Hospital</strong> | ${hospitalConfig.address}<br>
+    Phone: +91-9373111709 | Email: ${hospitalConfig.email} | Website: ${hospitalConfig.website}<br>
     This is a controlled document. Unauthorized copying or distribution is prohibited.
   </div>
 </body>
@@ -857,20 +855,21 @@ Generate the complete HTML with all sections filled in appropriately based on th
   const postProcessHTML = (html: string): string => {
     let processed = html;
 
-    // Replace any logo placeholder with actual logo
+    // Replace any logo placeholder with actual logo (reduced margin - 5px instead of 10px)
     processed = processed.replace(
       /<div class="logo-area">[\s\S]*?<\/div>/gi,
-      `<img src="${logoUrl}" alt="Dr. Murali's Hope Hospital" class="logo" style="width: 180px; height: auto; margin: 0 auto 10px; display: block;" onerror="this.style.display='none'">`
+      `<img src="${logoUrl}" alt="Hope Hospital" class="logo" style="width: 180px; height: auto; margin: 0 auto 5px; display: block;" onerror="this.style.display='none'">`
     );
 
     // Replace "HOSPITAL<br>LOGO" or similar placeholders
     processed = processed.replace(
       /HOSPITAL\s*(<br\s*\/?>)?\s*LOGO/gi,
-      `<img src="${logoUrl}" alt="Dr. Murali's Hope Hospital" style="width: 180px; height: auto;">`
+      `<img src="${logoUrl}" alt="Hope Hospital" style="width: 180px; height: auto; margin-bottom: 5px;">`
     );
 
-    // Replace "Hope Hospital" with "Dr. Murali's Hope Hospital"
-    processed = processed.replace(/(?<!Dr\. Murali's )Hope Hospital/g, "Dr. Murali's Hope Hospital");
+    // Remove tagline "Assured | Committed | Proficient"
+    processed = processed.replace(/<div class="tagline"[^>]*>[\s\S]*?<\/div>/gi, '');
+    processed = processed.replace(/Assured\s*\|\s*Committed\s*\|\s*Proficient/gi, '');
 
     // Fix dates - replace empty or placeholder dates
     processed = processed.replace(/Date:\s*<\/div>/gi, `Date: ${effectiveDate}</div>`);
@@ -893,7 +892,6 @@ Generate the complete HTML with all sections filled in appropriately based on th
     );
 
     // Fix signature sections - replace generic names with actual staff
-    // Prepared By - Jagruti
     processed = processed.replace(
       /Name:\s*(Quality Manager|Quality Officer|Staff|Prepared By Staff|\[Name\])?(\s*<br|\s*$)/gi,
       `Name: Jagruti$2`
@@ -922,13 +920,29 @@ Generate the complete HTML with all sections filled in appropriately based on th
       );
     }
 
-    // Add tagline if missing
-    if (!processed.includes('Assured | Committed | Proficient')) {
-      processed = processed.replace(
-        /(<div class="hospital-address">)/i,
-        `<div class="tagline" style="font-size: 11px; color: #666; font-style: italic; margin-bottom: 5px;">Assured | Committed | Proficient</div>$1`
-      );
-    }
+    // Fix footer - use "Hope Hospital" and add mobile number
+    processed = processed.replace(
+      /<div class="footer">([\s\S]*?)<\/div>/gi,
+      `<div class="footer">
+        <strong>Hope Hospital</strong> | ${hospitalConfig.address}<br>
+        Phone: +91-9373111709 | Email: ${hospitalConfig.email} | Website: ${hospitalConfig.website}<br>
+        This is a controlled document. Unauthorized copying or distribution is prohibited.
+      </div>`
+    );
+
+    // Fix stamp area
+    processed = processed.replace(
+      /<div class="stamp-area">([\s\S]*?)<\/div>/gi,
+      `<div class="stamp-area" style="border: 2px solid #1565C0; border-radius: 10px; padding: 15px; text-align: center; margin: 20px 0; background: #f8f9fa;">
+        <div style="font-weight: bold; color: #1565C0; font-size: 14px;">DR. MURALI'S HOPE HOSPITAL</div>
+        <div style="font-weight: 600; margin-top: 5px;">QUALITY MANAGEMENT SYSTEM</div>
+        <div style="margin-top: 5px; font-size: 11px; color: #666;">Controlled Document</div>
+      </div>`
+    );
+
+    // Reduce logo margin in any remaining places
+    processed = processed.replace(/margin:\s*0\s*auto\s*10px/gi, 'margin: 0 auto 5px');
+    processed = processed.replace(/margin-bottom:\s*10px/gi, 'margin-bottom: 5px');
 
     return processed;
   };
