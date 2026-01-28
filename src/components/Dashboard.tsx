@@ -4,6 +4,7 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Icon from '@mui/material/Icon';
 import LinearProgress from '@mui/material/LinearProgress';
+import CircularProgress from '@mui/material/CircularProgress';
 import { getOverallStats } from '../data/nabhData';
 import { useNABHStore } from '../store/nabhStore';
 
@@ -67,8 +68,21 @@ function StatCard({ title, value, total, icon, color }: StatCardProps) {
 }
 
 export default function Dashboard() {
-  const { chapters } = useNABHStore();
-  const stats = getOverallStats();
+  const { chapters, isLoadingFromSupabase } = useNABHStore();
+  const stats = getOverallStats(chapters);
+
+  if (isLoadingFromSupabase) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={40} />
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
+            Loading NABH data from Supabase...
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box>

@@ -416,7 +416,8 @@ export const getKPIByNumber = (number: number): KPIDefinition | undefined => {
   return NABH_KPIS.find(kpi => kpi.number === number);
 };
 
-// Generate sample data for demonstration
+// Generate sample data for demonstration purposes only
+// Note: This is for demo/testing - replace with actual hospital data in production
 export const generateSampleKPIData = (kpiId: string, months: number = 12): { month: string; value: number; target: number }[] => {
   const kpi = getKPIById(kpiId);
   if (!kpi) return [];
