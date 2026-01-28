@@ -17,6 +17,7 @@ import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Icon from '@mui/material/Icon';
 import Tooltip from '@mui/material/Tooltip';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate } from 'react-router-dom';
 import { useNABHStore } from '../store/nabhStore';
 import type { Status } from '../types/nabh';
@@ -47,6 +48,7 @@ export default function ObjectiveList() {
     searchQuery,
     filterStatus,
     filterPriority,
+    isLoadingFromSupabase,
     setSearchQuery,
     setFilterStatus,
     setFilterPriority,
@@ -135,8 +137,18 @@ export default function ObjectiveList() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {objectives.map((obj) => (
-              <TableRow
+            {isLoadingFromSupabase ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <CircularProgress size={24} />
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Loading data from Supabase...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              objectives.map((obj) => (
+                <TableRow
                 key={obj.id}
                 hover
                 sx={{ cursor: 'pointer' }}
@@ -209,7 +221,7 @@ export default function ObjectiveList() {
                   </Tooltip>
                 </TableCell>
               </TableRow>
-            ))}
+            )))}
           </TableBody>
         </Table>
       </TableContainer>

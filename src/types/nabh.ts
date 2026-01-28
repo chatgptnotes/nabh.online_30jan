@@ -76,10 +76,50 @@ export interface ObjectiveElement {
   notes: string;
 }
 
+// New normalized schema types
+export interface NABHChapter {
+  id: string;
+  chapter_number: number;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NABHStandard {
+  id: string;
+  chapter_id: string;
+  standard_number: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NABHObjectiveElement {
+  id: string;
+  standard_id: string;
+  element_number: string;
+  description: string;
+  interpretation: string;
+  is_core: boolean;
+  status: 'Not Started' | 'In Progress' | 'Completed' | 'Not Applicable';
+  assignee: string;
+  evidence_links: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  infographic_svg?: string;
+  infographic_data_url?: string;
+  infographic_created_at?: string;
+}
+
+// Legacy type for backwards compatibility
 export interface Standard {
   code: string;
   title: string;
   intent?: string;
+  elements?: ObjectiveElement[];
 }
 
 export interface Chapter {
@@ -89,6 +129,7 @@ export interface Chapter {
   fullName: string;
   type: ChapterType;
   objectives: ObjectiveElement[];
+  standards?: Standard[];
 }
 
 export interface NABHData {

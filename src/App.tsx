@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme, alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -17,6 +17,7 @@ import CommitteesPage from './components/CommitteesPage';
 import KPIsPage from './components/KPIsPage';
 import KPIDetailPage from './components/KPIDetailPage';
 import SlideDeckPage from './components/SlideDeckPage';
+import DataMigrationPage from './components/DataMigrationPage';
 import Footer from './components/Footer';
 import { useNABHStore } from './store/nabhStore';
 
@@ -241,6 +242,7 @@ function MainContent() {
   const isKPIsPage = location.pathname === '/kpis';
   const isKPIDetailPage = location.pathname.startsWith('/kpi/');
   const isPresentationsPage = location.pathname === '/presentations';
+  const isMigrationPage = location.pathname === '/migration';
   const isLandingPage = location.pathname === '/' && !selectedChapter;
 
   if (isAIPage) {
@@ -271,6 +273,10 @@ function MainContent() {
     return <SlideDeckPage />;
   }
 
+  if (isMigrationPage) {
+    return <DataMigrationPage />;
+  }
+
   if (isLandingPage) {
     return <LandingPage />;
   }
@@ -281,7 +287,12 @@ function MainContent() {
 function AppContent() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const { selectedChapter } = useNABHStore();
+  const { selectedChapter, loadDataFromSupabase } = useNABHStore();
+
+  // Load data from Supabase on app start
+  useEffect(() => {
+    loadDataFromSupabase();
+  }, [loadDataFromSupabase]);
   const isAIPage = location.pathname === '/ai-generator';
   const isObjectiveDetailPage = location.pathname.startsWith('/objective/');
   const isKPIDetailPage = location.pathname.startsWith('/kpi/');

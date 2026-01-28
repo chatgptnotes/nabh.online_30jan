@@ -1,4 +1,4 @@
-import type { ObjectiveElement } from '../types/nabh';
+import type { ObjectiveElement, NABHChapter, NABHStandard, NABHObjectiveElement } from '../types/nabh';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -540,6 +540,437 @@ export async function deleteGeneratedEvidence(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error deleting evidence:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+// ============================================
+// Chapter Management Functions
+// ============================================
+
+// Type for chapter data from Supabase
+interface ChapterRow {
+  id: string;
+  chapter_number: number;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Load allowed chapters from nabh_chapters table
+ */
+export async function loadChaptersFromSupabase(): Promise<{
+  success: boolean;
+  data?: ChapterRow[];
+  error?: string;
+}> {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_chapters?select=*&order=chapter_number.asc`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error loading chapters from Supabase:', response.status, errorText);
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const chapters = await response.json();
+    return { success: true, data: chapters as ChapterRow[] };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error loading chapters:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+// ============================================
+// New Normalized Schema Functions
+// ============================================
+
+/**
+ * Load standards for a specific chapter from nabh_standards table
+ */
+export async function loadStandardsByChapter(chapterId: string): Promise<{
+  success: boolean;
+  data?: NABHStandard[];
+  error?: string;
+}> {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_standards?chapter_id=eq.${chapterId}&select=*&order=standard_number.asc`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error loading standards from Supabase:', response.status, errorText);
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const standards = await response.json();
+    return { success: true, data: standards as NABHStandard[] };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error loading standards:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Load objective elements for a specific standard from nabh_objective_elements table
+ */
+export async function loadObjectiveElementsByStandard(standardId: string): Promise<{
+  success: boolean;
+  data?: NABHObjectiveElement[];
+  error?: string;
+}> {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_objective_elements?standard_id=eq.${standardId}&select=*&order=element_number.asc`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error loading objective elements from Supabase:', response.status, errorText);
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const elements = await response.json();
+    return { success: true, data: elements as NABHObjectiveElement[] };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error loading objective elements:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Load all data from normalized schema
+ */
+export async function loadAllNormalizedData(): Promise<{
+  success: boolean;
+  data?: {
+    chapters: NABHChapter[];
+    standards: NABHStandard[];
+    elements: NABHObjectiveElement[];
+  };
+  error?: string;
+}> {
+  try {
+    // Load all chapters
+    const chaptersResult = await loadChaptersFromSupabase();
+    if (!chaptersResult.success) {
+      return { success: false, error: chaptersResult.error };
+    }
+
+    // Load all standards
+    const standardsResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_standards?select=*&order=standard_number.asc`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+
+    if (!standardsResponse.ok) {
+      const errorText = await standardsResponse.text();
+      return { success: false, error: `Standards error: ${standardsResponse.status}: ${errorText}` };
+    }
+
+    // Load all objective elements  
+    const elementsResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_objective_elements?select=*&order=element_number.asc`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+
+    if (!elementsResponse.ok) {
+      const errorText = await elementsResponse.text();
+      return { success: false, error: `Elements error: ${elementsResponse.status}: ${errorText}` };
+    }
+
+    const standards = await standardsResponse.json();
+    const elements = await elementsResponse.json();
+
+    return {
+      success: true,
+      data: {
+        chapters: chaptersResult.data as NABHChapter[],
+        standards: standards as NABHStandard[],
+        elements: elements as NABHObjectiveElement[],
+      },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error loading normalized data:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+// ============================================
+// Data Insertion Utilities for Migration
+// ============================================
+
+/**
+ * Insert a new chapter into nabh_chapters table
+ */
+export async function insertChapter(chapter: {
+  chapter_number: number;
+  name: string;
+  description: string;
+}): Promise<{ success: boolean; data?: NABHChapter; error?: string }> {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_chapters`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify(chapter),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error inserting chapter:', response.status, errorText);
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const insertedChapter = await response.json();
+    return { success: true, data: insertedChapter[0] as NABHChapter };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error inserting chapter:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Insert a new standard into nabh_standards table
+ */
+export async function insertStandard(standard: {
+  chapter_id: string;
+  standard_number: string;
+  name: string;
+  description?: string;
+}): Promise<{ success: boolean; data?: NABHStandard; error?: string }> {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_standards`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify(standard),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error inserting standard:', response.status, errorText);
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const insertedStandard = await response.json();
+    return { success: true, data: insertedStandard[0] as NABHStandard };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error inserting standard:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Insert a new objective element into nabh_objective_elements table
+ */
+export async function insertObjectiveElement(element: {
+  standard_id: string;
+  element_number: string;
+  description: string;
+  interpretation?: string;
+  is_core?: boolean;
+  status?: 'Not Started' | 'In Progress' | 'Completed' | 'Not Applicable';
+  assignee?: string;
+  evidence_links?: string;
+  notes?: string;
+}): Promise<{ success: boolean; data?: NABHObjectiveElement; error?: string }> {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/nabh_objective_elements`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({
+          ...element,
+          is_core: element.is_core || false,
+          status: element.status || 'Not Started',
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error inserting objective element:', response.status, errorText);
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    const insertedElement = await response.json();
+    return { success: true, data: insertedElement[0] as NABHObjectiveElement };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error inserting objective element:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Helper function to migrate data from a structured format
+ * Usage: Call this with your NABH data to populate the normalized tables
+ */
+export async function migrateDataToNormalizedSchema(data: {
+  chapters: Array<{
+    chapter_number: number;
+    name: string;
+    description: string;
+    standards: Array<{
+      standard_number: string;
+      name: string;
+      description?: string;
+      elements: Array<{
+        element_number: string;
+        description: string;
+        interpretation?: string;
+        is_core?: boolean;
+        status?: 'Not Started' | 'In Progress' | 'Completed' | 'Not Applicable';
+        assignee?: string;
+        evidence_links?: string;
+        notes?: string;
+      }>;
+    }>;
+  }>;
+}): Promise<{ success: boolean; error?: string; stats?: { chapters: number; standards: number; elements: number } }> {
+  try {
+    let chaptersInserted = 0;
+    let standardsInserted = 0;
+    let elementsInserted = 0;
+
+    for (const chapterData of data.chapters) {
+      // Insert chapter
+      const chapterResult = await insertChapter({
+        chapter_number: chapterData.chapter_number,
+        name: chapterData.name,
+        description: chapterData.description,
+      });
+
+      if (!chapterResult.success) {
+        console.error(`Failed to insert chapter ${chapterData.name}:`, chapterResult.error);
+        continue;
+      }
+
+      chaptersInserted++;
+      const insertedChapter = chapterResult.data!;
+
+      // Insert standards for this chapter
+      for (const standardData of chapterData.standards) {
+        const standardResult = await insertStandard({
+          chapter_id: insertedChapter.id,
+          standard_number: standardData.standard_number,
+          name: standardData.name,
+          description: standardData.description,
+        });
+
+        if (!standardResult.success) {
+          console.error(`Failed to insert standard ${standardData.standard_number}:`, standardResult.error);
+          continue;
+        }
+
+        standardsInserted++;
+        const insertedStandard = standardResult.data!;
+
+        // Insert elements for this standard
+        for (const elementData of standardData.elements) {
+          const elementResult = await insertObjectiveElement({
+            standard_id: insertedStandard.id,
+            element_number: elementData.element_number,
+            description: elementData.description,
+            interpretation: elementData.interpretation,
+            is_core: elementData.is_core,
+            status: elementData.status,
+            assignee: elementData.assignee,
+            evidence_links: elementData.evidence_links,
+            notes: elementData.notes,
+          });
+
+          if (!elementResult.success) {
+            console.error(`Failed to insert element ${elementData.element_number}:`, elementResult.error);
+            continue;
+          }
+
+          elementsInserted++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      stats: {
+        chapters: chaptersInserted,
+        standards: standardsInserted,
+        elements: elementsInserted,
+      },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error migrating data:', errorMessage);
     return { success: false, error: errorMessage };
   }
 }
