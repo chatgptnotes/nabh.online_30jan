@@ -61,9 +61,10 @@ export default function ObjectiveList() {
 
   const objectives = getFilteredObjectives(chapter.id);
 
-  const handleViewDetail = (objectiveId: string) => {
-    setSelectedObjective(objectiveId);
-    navigate(`/objective/${chapter.id}/${objectiveId}`);
+  const handleViewDetail = (objective: typeof chapter.objectives[0]) => {
+    setSelectedObjective(objective.id);
+    // Use code in URL for better readability
+    navigate(`/objective/${chapter.id}/${objective.code}`);
   };
 
   return (
@@ -152,7 +153,7 @@ export default function ObjectiveList() {
                 key={obj.id}
                 hover
                 sx={{ cursor: 'pointer' }}
-                onClick={() => handleViewDetail(obj.id)}
+                onClick={() => handleViewDetail(obj)}
               >
                 <TableCell>
                   <Typography variant="body2" fontWeight={600}>
@@ -208,7 +209,7 @@ export default function ObjectiveList() {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleViewDetail(obj.id);
+                        handleViewDetail(obj);
                       }}
                     >
                       <Icon>visibility</Icon>

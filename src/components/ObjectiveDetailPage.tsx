@@ -173,8 +173,8 @@ export default function ObjectiveDetailPage() {
   };
 
   // Find chapter and objective
-  const chapter = chapters.find((c) => c.id === chapterId);
-  const objective = chapter?.objectives.find((o) => o.id === objectiveId);
+  const chapter = chapters.find((c) => c.id === chapterId || c.code.toLowerCase() === chapterId?.toLowerCase());
+  const objective = chapter?.objectives.find((o) => o.id === objectiveId || o.code === objectiveId || o.code.toLowerCase().replace(/\./g, '-') === objectiveId?.toLowerCase());
 
   // Set selected chapter when page loads
   useEffect(() => {
