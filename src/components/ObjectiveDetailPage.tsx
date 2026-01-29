@@ -1036,15 +1036,44 @@ Generate the complete HTML with all sections filled in appropriately based on th
     processed = processed.replace(/Review Date<\/th><td>[^<]*<\/td>/gi, `Review Date</th><td>${reviewDate}</td>`);
 
     // 7. Fix signature sections with realistic handwritten signatures
-    const jagrutiSignature = `<svg width="120" height="40" viewBox="0 0 120 40" style="display:inline-block;vertical-align:middle;">
-      <path d="M5,25 Q15,10 25,20 T45,15 Q55,25 65,20 T85,25 Q95,15 105,22"
-            stroke="#1565C0" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <text x="10" y="38" font-family="serif" font-size="8" fill="#666">Jagruti</text>
+    // Jagruti - flowing feminine signature with loops
+    const jagrutiSignature = `<svg width="130" height="50" viewBox="0 0 130 50" style="display:inline-block;vertical-align:middle;">
+      <defs>
+        <filter id="blur1" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.3"/>
+        </filter>
+      </defs>
+      <path d="M8,28 C12,18 18,12 28,16 C38,20 32,32 42,28 C52,24 48,14 58,18 C68,22 72,30 82,26 C88,24 92,18 98,22 L105,20" 
+            stroke="#1a237e" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#blur1)"/>
+      <path d="M85,18 C90,12 95,10 100,14" stroke="#1a237e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <text x="25" y="46" font-family="'Times New Roman', serif" font-size="9" fill="#555" font-style="italic">Jagruti</text>
     </svg>`;
-    const drShirazSignature = `<svg width="140" height="45" viewBox="0 0 140 45" style="display:inline-block;vertical-align:middle;">
-      <path d="M10,20 Q20,5 35,18 T55,12 Q70,22 85,15 T110,20 Q120,10 130,18"
-            stroke="#0D47A1" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <text x="15" y="42" font-family="serif" font-size="9" fill="#444">Dr. Shiraz Sheikh</text>
+    
+    // Gaurav - angular masculine signature
+    const gauravSignature = `<svg width="120" height="50" viewBox="0 0 120 50" style="display:inline-block;vertical-align:middle;">
+      <defs>
+        <filter id="blur2" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.3"/>
+        </filter>
+      </defs>
+      <path d="M10,30 L20,15 L35,28 L45,12 L55,25 L70,18 L85,30 L95,22" 
+            stroke="#0d47a1" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#blur2)"/>
+      <path d="M70,18 C78,8 88,12 95,8" stroke="#0d47a1" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <text x="30" y="46" font-family="'Times New Roman', serif" font-size="9" fill="#555" font-style="italic">Gaurav</text>
+    </svg>`;
+    
+    // Dr. Shiraz Sheikh - professional doctor's signature with flourish
+    const drShirazSignature = `<svg width="160" height="55" viewBox="0 0 160 55" style="display:inline-block;vertical-align:middle;">
+      <defs>
+        <filter id="blur3" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.4"/>
+        </filter>
+      </defs>
+      <path d="M12,25 C18,12 28,8 38,15 C48,22 45,32 55,28 C65,24 62,15 75,18 C88,21 95,30 108,25 C118,21 128,15 140,22" 
+            stroke="#1565c0" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#blur3)"/>
+      <path d="M130,22 Q140,12 148,18 L150,16" stroke="#1565c0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path d="M5,30 L15,30" stroke="#1565c0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <text x="25" y="50" font-family="'Times New Roman', serif" font-size="10" fill="#444" font-style="italic">Dr. Shiraz Sheikh</text>
     </svg>`;
 
     processed = processed.replace(
@@ -1062,6 +1091,16 @@ Generate the complete HTML with all sections filled in appropriately based on th
     processed = processed.replace(
       /Sd\/-/gi,
       jagrutiSignature
+    );
+    
+    // Replace Gaurav signatures in Verified By sections
+    processed = processed.replace(
+      /VERIFIED BY[\s\S]*?Name:\s*Gaurav/gi,
+      `VERIFIED BY</th></tr><tr><td style="text-align: center; padding: 15px;">
+        <div><strong>Gaurav</strong></div>
+        <div>Hospital Administrator</div>
+        <div style="margin-top: 8px;">${gauravSignature}</div>
+      </td></tr><tr><td>Name: Gaurav`
     );
 
     // 8. Ensure Dr. Shiraz Sheikh is in Approved By with realistic signature
@@ -1474,11 +1513,38 @@ Generate a complete, professional HTML document for the above requirement. Inclu
       ],
       'QI': [
         { id: 'reg-qi-1', name: 'Quality Indicator Register', description: 'Monthly quality indicators tracking', htmlContent: '', isGenerated: false },
-        { id: 'reg-qi-2', name: 'CAPA Register', description: 'Corrective and Preventive Actions tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-qi-2', name: 'CAPA Register', description: 'Corrective and Preventive Actions tracking with root cause analysis, corrective action, preventive action, responsible person, target date, completion date, and verification', htmlContent: '', isGenerated: false },
         { id: 'reg-qi-3', name: 'Near Miss Register', description: 'Near miss events reporting', htmlContent: '', isGenerated: false },
         { id: 'reg-qi-4', name: 'Sentinel Event Register', description: 'Sentinel events and RCA documentation', htmlContent: '', isGenerated: false },
         { id: 'reg-qi-5', name: 'Patient Safety Incident Register', description: 'All patient safety incidents', htmlContent: '', isGenerated: false },
       ],
+      'PSQ': [
+        { id: 'reg-psq-1', name: 'Quality Indicator Register', description: 'Monthly quality indicators tracking with trend analysis', htmlContent: '', isGenerated: false },
+        { id: 'reg-psq-2', name: 'CAPA Register', description: 'Corrective and Preventive Actions with root cause (5-Why/Fishbone), corrective action, preventive action, responsible person, target date, completion date, and verification status', htmlContent: '', isGenerated: false },
+        { id: 'reg-psq-3', name: 'Patient Safety Incident Register', description: 'All patient safety incidents with severity classification', htmlContent: '', isGenerated: false },
+        { id: 'reg-psq-4', name: 'Near Miss Register', description: 'Near miss events reporting and analysis', htmlContent: '', isGenerated: false },
+        { id: 'reg-psq-5', name: 'Sentinel Event Register', description: 'Sentinel events with RCA documentation', htmlContent: '', isGenerated: false },
+        { id: 'reg-psq-6', name: 'Risk Assessment Register', description: 'Proactive risk assessments (FMEA)', htmlContent: '', isGenerated: false },
+      ],
+      'ROM': [
+        { id: 'reg-rom-1', name: 'Management Review Minutes Register', description: 'Management review meeting records', htmlContent: '', isGenerated: false },
+        { id: 'reg-rom-2', name: 'Strategic Plan Review Register', description: 'Annual strategic plan tracking', htmlContent: '', isGenerated: false },
+        { id: 'reg-rom-3', name: 'CAPA Register', description: 'Management-level corrective actions from audit findings', htmlContent: '', isGenerated: false },
+      ],
+      'IMS': [
+        { id: 'reg-ims-1', name: 'Medical Records Audit Register', description: 'Medical record completeness audits', htmlContent: '', isGenerated: false },
+        { id: 'reg-ims-2', name: 'Document Control Register', description: 'Controlled document master list', htmlContent: '', isGenerated: false },
+        { id: 'reg-ims-3', name: 'IT Incident Register', description: 'IT downtime and incident tracking', htmlContent: '', isGenerated: false },
+      ],
+    };
+    
+    // Universal CAPA register available for all chapters
+    const universalCAPARegister: RegisterItem = {
+      id: 'reg-universal-capa',
+      name: 'CAPA Register (Master)',
+      description: 'Master Corrective and Preventive Actions register with: Finding description, Root cause analysis (5-Why/Fishbone), Corrective action taken, Preventive measures, Responsible person, Target date, Completion date, Verification status',
+      htmlContent: '',
+      isGenerated: false,
     };
 
     // Find matching registers based on objective code prefix
@@ -1493,6 +1559,12 @@ Generate a complete, professional HTML document for the above requirement. Inclu
         { id: 'reg-gen-3', name: 'Audit Register', description: 'Internal audit findings and actions', htmlContent: '', isGenerated: false },
         { id: 'reg-gen-4', name: 'Training Record Register', description: 'Related training documentation', htmlContent: '', isGenerated: false },
       ];
+    }
+    
+    // Always add Universal CAPA Register at the beginning if not already present
+    const hasCAPA = registers.some(r => r.name.toLowerCase().includes('capa'));
+    if (!hasCAPA) {
+      registers = [universalCAPARegister, ...registers];
     }
 
     return registers;
@@ -1541,25 +1613,27 @@ DESCRIPTION: ${register.description}
 NABH OBJECTIVE: ${objective?.code} - ${objective?.title}
 
 Create a professional, print-ready HTML document with:
-1. Hospital header with logo placeholder and address
-2. Register title and purpose
-3. A table with realistic dummy data (at least 15-20 entries spanning the last 9 months)
-4. Columns appropriate for this type of register
-5. Space for signatures/verifications
-6. Footer with controlled document stamp
+1. Hospital header with "HOPE HOSPITAL" branding and address: ${hospitalConfig.address}
+2. Register title, document number, version, and purpose
+3. A table with EXACTLY 18-20 realistic entries spanning the last 9 months (from ${new Date(Date.now() - 270 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN')} to ${new Date().toLocaleDateString('en-IN')})
+4. Columns appropriate for this type of register with proper headers
+5. Signature verification section at bottom
+6. Footer with "HOPE HOSPITAL - QUALITY MANAGEMENT SYSTEM - Controlled Document"
 
-For CAPA entries, include:
-- Finding/Issue description
-- Root cause analysis
-- Corrective action taken
-- Preventive measures implemented
-- Responsible person
-- Target date and completion date
-- Verification status
+MANDATORY - Use these INDIAN NAMES for entries (mix and match):
+Patient names: Rajesh Kumar, Priya Sharma, Amit Patel, Sunita Devi, Mahesh Verma, Kavita Singh, Ramesh Yadav, Anita Gupta, Suresh Reddy, Lakshmi Iyer, Arun Nair, Meena Joshi, Vikram Thakur, Sanjay Desai, Neha Kulkarni, Ravi Pillai, Deepa Menon, Kiran Saxena
+Staff names: Dr. Shiraz Sheikh, Dr. Anjali Mehta, Dr. Vikash Agarwal, Nurse Priyanka, Nurse Rekha, Jagruti (QM), Gaurav (Admin), Sunil (Lab Tech), Kavitha (Pharmacist)
 
-Use realistic Indian names, dates (within last 9 months), and data that would be acceptable to NABH auditors.
+For CAPA Register entries, MUST include these columns:
+- S.No. | Date | Finding/NC Description | Root Cause (use 5-Why or Fishbone) | Corrective Action | Preventive Action | Responsible Person | Target Date | Completion Date | Verification Status | Verified By
 
-Generate complete HTML with embedded CSS. Do NOT use markdown or code blocks.`;
+IMPORTANT:
+- Dates must be distributed across 9 months, not clustered
+- Use realistic medical/hospital scenarios
+- Status should show mix: "Open", "Closed", "In Progress"
+- Include proper serial numbers
+
+Generate complete HTML with embedded CSS styling. Do NOT use markdown code blocks.`;
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
@@ -1891,7 +1965,7 @@ Provide only the Hindi explanation, no English text. The explanation should be c
   // Handle interpretation save (blur event) to trigger Hindi generation
   const handleInterpretationBlur = async () => {
     if (objective.description && objective.description.trim()) {
-      await handleGenerateHindiExplanation(objective.description);
+      await handleGenerateHindiExplanation(objective.interpretation || objective.description);
     }
   };
 
@@ -2271,7 +2345,7 @@ DESIGN REQUIREMENTS:
                   variant="outlined"
                   color="warning"
                   startIcon={isGeneratingHindi ? <CircularProgress size={16} color="inherit" /> : <Icon>refresh</Icon>}
-                  onClick={() => handleGenerateHindiExplanation(objective.description)}
+                  onClick={() => handleGenerateHindiExplanation(objective.interpretation || objective.description)}
                   disabled={isGeneratingHindi || !objective.description}
                   size="small"
                 >

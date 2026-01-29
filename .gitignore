@@ -28,3 +28,4 @@ dist-ssr
 *.mjs
 migrate-*.js
 add-*.sql
+*.bak
