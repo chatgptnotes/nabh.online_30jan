@@ -1,71 +1,36 @@
-# NABH Evidence Creator - Project Instructions
+# CLAUDE.md - NABH Evidence Creator
 
-## Project Overview
-NABH Evidence Creator is a React/TypeScript application for generating NABH (National Accreditation Board for Hospitals) accreditation documentation for Hope Hospital.
+## MISSION
+Fix and fully implement the "Search NABH Training Videos" feature in the Training Videos section of the ObjectiveDetailPage. The button must be clearly visible, functional, and search YouTube for NABH-related training videos.
 
-## Evidence Document Generation Rules
+## TECH STACK
+- React 18 + TypeScript
+- Vite build system
+- Material UI (MUI)
+- Zustand state management
+- Supabase backend
+- Vercel deployment
 
-### Hospital Branding
-- Hospital name in documents: **Hope Hospital** (NOT "Dr. Murali's Hope Hospital")
-- Stamp area must show: **HOPE HOSPITAL** / QUALITY MANAGEMENT SYSTEM / Controlled Document
-- Remove all instances of "Dr. Murali's" from generated content
-- Remove tagline "Assured | Committed | Proficient" from all documents
-- Phone number: +91-9373111709
-- Address: 2, Teka Naka, Nagpur
+## CURRENT STATUS
+- Button exists in code but user reports not seeing it
+- Possible issues: styling, visibility, caching, or functionality
 
-### Document Dates
-- **Document dates must be 9 months prior to current date** (for NABH audit compliance)
-- All dates in a document should be consistent with the document creation date
-- Review dates should be 1 year after the effective date
-- Register entries should span the last 9 months with realistic distribution
+## ACTION PLAN
+1. Verify current code structure
+2. Fix button visibility and styling
+3. Implement proper YouTube search functionality
+4. Add loading states and error handling
+5. Test thoroughly
+6. Deploy with cache-busting
+7. Verify on production
 
-### Signatures
-- Use realistic SVG-based handwritten signatures (not just "Sd/-")
-- Quality Manager/Prepared By: Jagruti (Quality Manager / HR)
-- Approved By: Dr. Shiraz Sheikh (NABH Coordinator / Administrator)
-- Signatures should look natural and professional
+## QUALITY BARS
+- Zero TypeScript errors
+- Button clearly visible with proper contrast
+- Functional YouTube search
+- Loading states implemented
+- Error handling in place
 
-### Header Spacing
-- Reduce spacing between logo and address to approximately 0.5cm (2px)
-- No excessive margins in header section
-
-### Registers & CAPA Documentation
-- Generate registers with 15-20 realistic entries
-- Use Indian names and realistic data
-- Include CAPA (Corrective and Preventive Action) with:
-  - Finding/Issue description
-  - Root cause analysis
-  - Corrective action taken
-  - Preventive measures implemented
-  - Responsible person
-  - Target date and completion date
-  - Verification status
-- Data should be acceptable to NABH auditors
-
-### Custom Evidence Generation
-- Users can provide custom prompts to generate any evidence document
-- Generated documents should follow all branding rules above
-- Include proper hospital header, footer, and controlled document stamp
-
-## Tech Stack
-- React + TypeScript + Vite
-- Material-UI (MUI)
-- Supabase for backend
-- Gemini API for AI generation
-- Google Material Icons (no emojis)
-
-## Key Files
-- `/src/components/ObjectiveDetailPage.tsx` - Main evidence generation UI
-- `/src/services/objectiveStorage.ts` - Supabase storage functions
-- `/src/config/hospitalConfig.ts` - Hospital configuration
-
-## Development
-```bash
-pnpm install
-pnpm run dev     # Development server on port 5173
-pnpm run build   # Production build
-```
-
-## Deployment
-- Deployed to Vercel at https://www.nabh.online
-- Run `vercel --prod` to deploy
+## VERSION TRACKING
+- Version format: 1.x (increments on each push)
+- Footer shows version, date, repo name

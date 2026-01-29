@@ -3677,25 +3677,35 @@ DESIGN REQUIREMENTS:
                     </Box>
                   </Box>
                 ) : (
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                     <Button
                       variant="outlined"
                       startIcon={<Icon>add</Icon>}
                       onClick={() => setShowAddVideo(true)}
-                      size="small"
+                      size="medium"
+                      sx={{ minWidth: 180 }}
                     >
                       Add YouTube Video
                     </Button>
                     <Button
                       variant="contained"
                       color="error"
-                      startIcon={isSearchingYouTube ? <CircularProgress size={16} color="inherit" /> : <Icon>search</Icon>}
+                      startIcon={isSearchingYouTube ? <CircularProgress size={20} color="inherit" /> : <Icon>youtube_searched_for</Icon>}
                       onClick={handleSearchYouTube}
-                      size="small"
+                      size="medium"
                       disabled={isSearchingYouTube}
+                      sx={{ 
+                        minWidth: 250,
+                        fontWeight: 600,
+                        boxShadow: 2,
+                        '&:hover': { boxShadow: 4 }
+                      }}
                     >
-                      {isSearchingYouTube ? 'Searching...' : 'Search NABH Training Videos'}
+                      {isSearchingYouTube ? 'Searching YouTube...' : 'Search NABH Training Videos'}
                     </Button>
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                      AI-powered video suggestions
+                    </Typography>
                   </Box>
                 )}
                 

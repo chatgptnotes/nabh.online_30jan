@@ -1,8 +1,8 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-const VERSION = '1.0';
-const LAST_UPDATED = '2026-01-26';
+const VERSION = '1.4';
+const LAST_UPDATED = '2026-01-29';
 const REPO_NAME = 'nabh-evidence-creator';
 
 export default function Footer() {
