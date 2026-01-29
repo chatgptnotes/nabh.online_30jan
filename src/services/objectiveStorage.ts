@@ -158,6 +158,61 @@ export async function saveObjectiveToSupabase(
       console.error('Error saving to Supabase:', response.status, errorText);
       return { success: false, error: `${response.status}: ${errorText}` };
     }
+    
+    // Also update the normalized nabh_objective_elements table if we have YouTube videos or training materials
+    // This ensures the data is available when loading from the normalized schema
+    if (objective.youtubeVideos?.length || objective.trainingMaterials?.length || objective.sopDocuments?.length || objective.hindiExplanation) {
+      try {
+        // First, find the element ID by code
+        const [chapterCode, stdNum, elemNum] = objective.code.split('.');
+        const findResponse = await fetch(
+          `${SUPABASE_URL}/rest/v1/nabh_objective_elements?select=id,standard_id,nabh_standards(standard_number,chapter_id,nabh_chapters(name))&element_number=eq.${elemNum}`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          }
+        );
+        
+        if (findResponse.ok) {
+          const elements = await findResponse.json();
+          // Find the matching element by chapter and standard
+          const matchingElement = elements.find((e: any) => 
+            e.nabh_standards?.nabh_chapters?.name === chapterCode &&
+            e.nabh_standards?.standard_number === stdNum
+          );
+          
+          if (matchingElement) {
+            // Update the normalized table
+            const normalizedUpdate: Record<string, any> = {};
+            if (objective.youtubeVideos?.length) normalizedUpdate.youtube_videos = objective.youtubeVideos;
+            if (objective.trainingMaterials?.length) normalizedUpdate.training_materials = objective.trainingMaterials;
+            if (objective.sopDocuments?.length) normalizedUpdate.sop_documents = objective.sopDocuments;
+            if (objective.hindiExplanation) normalizedUpdate.hindi_explanation = objective.hindiExplanation;
+            if (objective.notes) normalizedUpdate.notes = objective.notes;
+            if (objective.assignee) normalizedUpdate.assignee = objective.assignee;
+            if (objective.status) normalizedUpdate.status = objective.status;
+            
+            await fetch(
+              `${SUPABASE_URL}/rest/v1/nabh_objective_elements?id=eq.${matchingElement.id}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                },
+                body: JSON.stringify(normalizedUpdate),
+              }
+            );
+          }
+        }
+      } catch (normalizedError) {
+        // Don't fail the main save if normalized update fails
+        console.warn('Could not update normalized table:', normalizedError);
+      }
+    }
 
     return { success: true };
   } catch (error) {
