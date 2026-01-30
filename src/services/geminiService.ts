@@ -2,10 +2,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getGeminiApiKey } from '../lib/supabase';
 import type { InfographicConfig } from './infographicGenerator';
 
-export const generateGeminiInfographic = async (config: InfographicConfig): Promise<string> => {
-  const apiKey = getGeminiApiKey();
+export const generateGeminiInfographic = async (config: InfographicConfig, customKey?: string): Promise<string> => {
+  const apiKey = customKey || getGeminiApiKey();
   if (!apiKey) {
-    throw new Error('Gemini API key is missing. Please configure VITE_GEMINI_API_KEY.');
+    throw new Error('Gemini API key is missing. Please enter a valid key.');
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);

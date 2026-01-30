@@ -138,6 +138,7 @@ export default function ObjectiveDetailPage() {
   const [selectedInfographicTemplate, setSelectedInfographicTemplate] = useState<InfographicTemplate>('modern-poster');
   const [selectedColorScheme, setSelectedColorScheme] = useState<ColorScheme>('healthcare-blue');
   const [infographicSource, setInfographicSource] = useState<'template' | 'gemini'>('template');
+  const [customGeminiKey, setCustomGeminiKey] = useState('');
 
   // State for Supabase persistence
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -2171,7 +2172,7 @@ Provide only the Hindi explanation, no English text. The explanation should be c
 
       if (infographicSource === 'gemini') {
         // Use Gemini AI to generate the infographic
-        svgContent = await generateGeminiInfographic(config);
+        svgContent = await generateGeminiInfographic(config, customGeminiKey);
       } else {
         // Use standard template generator
         svgContent = generateInfographic(config);
@@ -2530,6 +2531,28 @@ Provide only the Hindi explanation, no English text. The explanation should be c
               </Box>
 
               {/* Template & Color Scheme Selection */}
+              {infographicSource === 'gemini' && (
+                <Box sx={{ mb: 3 }}>
+                   <TextField
+                    fullWidth
+                    size="small"
+                    label="Gemini API Key (Optional)"
+                    placeholder="Enter your API key here if the default one fails"
+                    value={customGeminiKey}
+                    onChange={(e) => setCustomGeminiKey(e.target.value)}
+                    type="password"
+                    helperText={
+                      <span>
+                        Get a free key at{' '}
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
+                          Google AI Studio
+                        </a>
+                      </span>
+                    }
+                  />
+                </Box>
+              )}
+
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth size="small">
