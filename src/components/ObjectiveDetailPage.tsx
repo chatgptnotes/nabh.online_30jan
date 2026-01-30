@@ -45,6 +45,15 @@ import {
   deleteGeneratedEvidence,
   type GeneratedEvidence,
 } from '../services/objectiveStorage';
+import {
+  generateInfographic,
+  svgToPngDataUrl,
+  extractKeyPoints,
+  availableTemplates,
+  availableColorSchemes,
+  type InfographicTemplate,
+  type ColorScheme,
+} from '../services/infographicGenerator';
 
 // Expandable TextField styles
 const expandableTextFieldSx = {
@@ -120,6 +129,8 @@ export default function ObjectiveDetailPage() {
   const [isGeneratingInfographic, setIsGeneratingInfographic] = useState(false);
   const [generatedInfographicSvg, setGeneratedInfographicSvg] = useState<string>('');
   const [infographicSaveStatus, setInfographicSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [selectedInfographicTemplate, setSelectedInfographicTemplate] = useState<InfographicTemplate>('modern-poster');
+  const [selectedColorScheme, setSelectedColorScheme] = useState<ColorScheme>('healthcare-blue');
 
   // State for Supabase persistence
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -2141,7 +2152,7 @@ Provide only the Hindi explanation, no English text. The explanation should be c
     }
   };
 
-  // Generate Bilingual Infographic using Gemini Image Generation
+  // Generate Professional Bilingual Infographic using SVG Generator
   const handleGenerateInfographic = async () => {
     if (!objective.description) return;
 
@@ -2149,121 +2160,44 @@ Provide only the Hindi explanation, no English text. The explanation should be c
     setGeneratedInfographicSvg('');
 
     try {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
+      // Extract key compliance points from the description
+      const keyPoints = extractKeyPoints(objective.description);
+      
+      // Generate professional SVG infographic
+      const svgContent = generateInfographic({
+        title: objective.title || objective.code,
+        titleHindi: objective.hindiExplanation ? objective.hindiExplanation.substring(0, 80) : undefined,
+        code: objective.code,
+        isCore: objective.isCore,
+        description: objective.description,
+        descriptionHindi: objective.hindiExplanation,
+        keyPoints: keyPoints,
+        keyPointsHindi: [], // Can be populated if Hindi points are available
+        hospitalName: HOSPITAL_INFO.name,
+        hospitalAddress: HOSPITAL_INFO.address,
+        template: selectedInfographicTemplate,
+        colorScheme: selectedColorScheme,
+        showIcons: true,
+      });
 
-      // Create the prompt for infographic generation
-      const prompt = `Create a professional bilingual healthcare infographic poster for hospital display.
+      // Convert SVG to PNG data URL for better compatibility
+      const pngDataUrl = await svgToPngDataUrl(svgContent, 2);
+      
+      console.log('Infographic generated successfully');
+      setGeneratedInfographicSvg(pngDataUrl);
 
-TITLE: ${objective.code} - NABH Accreditation Standard
-${objective.isCore ? 'CORE ELEMENT - Critical for Patient Safety' : ''}
+      // Update objective with infographic (local storage)
+      updateObjective(chapter.id, objective.id, {
+        infographicSvg: svgContent,
+        infographicDataUrl: pngDataUrl,
+      });
 
-ENGLISH SECTION:
-${objective.description}
-
-HINDI SECTION (हिंदी):
-${objective.hindiExplanation || 'हिंदी व्याख्या उपलब्ध नहीं है'}
-
-HOSPITAL: ${HOSPITAL_INFO.name}
-
-DESIGN REQUIREMENTS:
-- Portrait orientation (suitable for A4/A3 printing)
-- Professional healthcare color scheme (blue #1565C0, white background, red #D32F2F accent)
-- Hospital name at the top with medical cross symbol
-- Objective code prominently displayed
-- Split layout: English on left/top, Hindi on right/bottom
-- 3-5 key compliance points with checkmark icons
-- Healthcare icons (stethoscope, heart, shield, medical cross)
-- Footer: "NABH Accreditation Compliance"
-- Clean, professional, easy to read from distance
-- Include visual hierarchy with headers and bullet points`;
-
-      // Use Gemini 3.0 Pro Image (Nano Banana Pro) for generation
-      // API reference: https://ai.google.dev/gemini-api/docs/image-generation
-      // Model: gemini-3-pro-image-preview (Nano Banana Pro - professional image generation)
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: `Generate an infographic image: ${prompt}` }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseModalities: ['TEXT', 'IMAGE'],
-            }
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Gemini API error:', errorData);
-        throw new Error(errorData.error?.message || 'Failed to generate infographic');
-      }
-
-      const data = await response.json();
-      console.log('Gemini API Response:', JSON.stringify(data, null, 2));
-
-      // Extract image from response
-      let imageDataUrl = '';
-      let textContent = '';
-      const candidate = data.candidates?.[0];
-
-      if (candidate?.content?.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData) {
-            const mimeType = part.inlineData.mimeType || 'image/png';
-            const base64Data = part.inlineData.data;
-            console.log('Base64 data length:', base64Data?.length);
-            console.log('Base64 first 100 chars:', base64Data?.substring(0, 100));
-            console.log('Base64 last 100 chars:', base64Data?.substring(base64Data.length - 100));
-            imageDataUrl = `data:${mimeType};base64,${base64Data}`;
-            console.log('Found image in response, mimeType:', mimeType);
-            console.log('Image data URL length:', imageDataUrl.length);
-          }
-          if (part.text) {
-            textContent = part.text;
-            console.log('Found text in response:', textContent.substring(0, 200));
-          }
-        }
-      }
-
-      if (imageDataUrl) {
-        console.log('Using generated image, data URL length:', imageDataUrl.length);
-        console.log('Setting state with image...');
-        setGeneratedInfographicSvg(imageDataUrl);
-        console.log('State set successfully');
-
-        // Update objective with infographic (local storage)
-        updateObjective(chapter.id, objective.id, {
-          infographicSvg: '',
-          infographicDataUrl: imageDataUrl,
-        });
-
-        // Save to Supabase for persistence
-        await saveInfographicToSupabase(imageDataUrl);
-      } else {
-        // No image was generated - show error with details
-        const errorMsg = textContent
-          ? `Gemini returned text instead of image. Model may not support image generation. Response: ${textContent.substring(0, 100)}...`
-          : 'No image generated. The model may not support image generation with current settings.';
-        console.error(errorMsg);
-        console.error('Full response:', data);
-        throw new Error(errorMsg);
-      }
+      // Save to Supabase for persistence
+      await saveInfographicToSupabase(pngDataUrl);
+      
     } catch (error) {
       console.error('Error generating infographic:', error);
-      setGeneratedInfographicSvg(''); // Clear on error
+      setGeneratedInfographicSvg('');
       alert(`Failed to generate infographic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGeneratingInfographic(false);
@@ -2529,14 +2463,92 @@ DESIGN REQUIREMENTS:
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Icon color="info">image</Icon>
                 <Typography fontWeight={600}>Bilingual Infographic (English + Hindi)</Typography>
+                <Chip label="Professional Templates" size="small" color="info" variant="outlined" />
               </Box>
             </AccordionSummary>
             <AccordionDetails>
               <Alert severity="info" icon={<Icon>lightbulb</Icon>} sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  Generate a professional bilingual infographic for display in hospital areas. The infographic includes both English and Hindi content based on the interpretation.
+                  Generate a high-quality, professional bilingual infographic for display in hospital areas. Choose from multiple modern templates and color schemes.
                 </Typography>
               </Alert>
+              
+              {/* Template & Color Scheme Selection */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Template Style</InputLabel>
+                    <Select
+                      value={selectedInfographicTemplate}
+                      label="Template Style"
+                      onChange={(e) => setSelectedInfographicTemplate(e.target.value as InfographicTemplate)}
+                    >
+                      {availableTemplates.map((template) => (
+                        <MenuItem key={template.value} value={template.value}>
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>{template.label}</Typography>
+                            <Typography variant="caption" color="text.secondary">{template.description}</Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Color Scheme</InputLabel>
+                    <Select
+                      value={selectedColorScheme}
+                      label="Color Scheme"
+                      onChange={(e) => setSelectedColorScheme(e.target.value as ColorScheme)}
+                    >
+                      {availableColorSchemes.map((scheme) => (
+                        <MenuItem key={scheme.value} value={scheme.value}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                bgcolor: scheme.preview,
+                                border: '2px solid',
+                                borderColor: 'grey.300',
+                              }}
+                            />
+                            <Typography variant="body2">{scheme.label}</Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+              
+              {/* Quick Color Scheme Preview */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                {availableColorSchemes.map((scheme) => (
+                  <Tooltip key={scheme.value} title={scheme.label}>
+                    <Box
+                      onClick={() => setSelectedColorScheme(scheme.value)}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1,
+                        bgcolor: scheme.preview,
+                        cursor: 'pointer',
+                        border: '3px solid',
+                        borderColor: selectedColorScheme === scheme.value ? 'common.white' : 'transparent',
+                        boxShadow: selectedColorScheme === scheme.value ? `0 0 0 2px ${scheme.preview}` : 'none',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                        },
+                      }}
+                    />
+                  </Tooltip>
+                ))}
+              </Box>
+              
               <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   variant="contained"
@@ -2544,23 +2556,35 @@ DESIGN REQUIREMENTS:
                   startIcon={isGeneratingInfographic ? <CircularProgress size={16} color="inherit" /> : <Icon>auto_awesome</Icon>}
                   onClick={handleGenerateInfographic}
                   disabled={isGeneratingInfographic || !objective.description}
+                  sx={{ minWidth: 200 }}
                 >
-                  {isGeneratingInfographic ? 'Generating Infographic...' : 'Generate Infographic'}
+                  {isGeneratingInfographic ? 'Generating...' : 'Generate Infographic'}
                 </Button>
                 {(generatedInfographicSvg || objective.infographicDataUrl) && (
-                  <Button
-                    variant="outlined"
-                    color="info"
-                    startIcon={<Icon>download</Icon>}
-                    onClick={handleDownloadInfographic}
-                  >
-                    Download as PNG
-                  </Button>
+                  <>
+                    <Button
+                      variant="outlined"
+                      color="info"
+                      startIcon={<Icon>download</Icon>}
+                      onClick={handleDownloadInfographic}
+                    >
+                      Download PNG
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      startIcon={<Icon>refresh</Icon>}
+                      onClick={handleGenerateInfographic}
+                      disabled={isGeneratingInfographic}
+                    >
+                      Regenerate
+                    </Button>
+                  </>
                 )}
                 {infographicSaveStatus === 'saving' && (
                   <Chip
                     icon={<CircularProgress size={14} />}
-                    label="Saving to cloud..."
+                    label="Saving..."
                     size="small"
                     color="default"
                   />
@@ -2568,7 +2592,7 @@ DESIGN REQUIREMENTS:
                 {infographicSaveStatus === 'saved' && (
                   <Chip
                     icon={<Icon sx={{ fontSize: 16 }}>cloud_done</Icon>}
-                    label="Saved to Supabase"
+                    label="Saved"
                     size="small"
                     color="success"
                   />
@@ -2576,7 +2600,7 @@ DESIGN REQUIREMENTS:
                 {infographicSaveStatus === 'error' && (
                   <Chip
                     icon={<Icon sx={{ fontSize: 16 }}>cloud_off</Icon>}
-                    label="Save failed (stored locally)"
+                    label="Local only"
                     size="small"
                     color="warning"
                   />

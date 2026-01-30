@@ -33,6 +33,13 @@ import CardMedia from '@mui/material/CardMedia';
 import { useNABHStore } from '../store/nabhStore';
 import { HOSPITAL_INFO, getNABHCoordinator, NABH_ASSESSOR_PROMPT } from '../config/hospitalConfig';
 import { getClaudeApiKey, getGeminiApiKey } from '../lib/supabase';
+import {
+  generateInfographic,
+  svgToDataUrl,
+  availableColorSchemes,
+  type InfographicTemplate,
+  type ColorScheme,
+} from '../services/infographicGenerator';
 
 // Expandable TextField styles
 const expandableTextFieldSx = {
@@ -420,77 +427,6 @@ async function callGeminiText(apiKey: string, prompt: string, userMessage: strin
   }
 }
 
-// Gemini API call for image generation using Imagen
-async function callGeminiImageGen(apiKey: string, prompt: string): Promise<string> {
-  if (!apiKey || apiKey.trim() === '') {
-    throw new Error('Gemini API key is not configured.');
-  }
-
-  try {
-    // Use Gemini's image generation capability
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: `Generate a detailed SVG code for a professional hospital signage/poster with the following requirements:
-
-Topic: ${prompt}
-
-Requirements:
-- Create a complete, valid SVG with dimensions 800x600
-- Use professional healthcare color scheme (blues, greens, whites)
-- Include bilingual text (English and Hindi)
-- Add appropriate healthcare icons/symbols
-- Make it print-ready and visually appealing
-- Include proper text formatting and hierarchy
-- Add a professional border/frame
-
-Return ONLY the complete SVG code, starting with <svg and ending with </svg>. No explanation or markdown.`,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 8192,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `Gemini API request failed with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    let svgContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Extract SVG from response if wrapped in markdown
-    const svgMatch = svgContent.match(/<svg[\s\S]*<\/svg>/i);
-    if (svgMatch) {
-      svgContent = svgMatch[0];
-    }
-
-    // Convert SVG to data URL
-    const base64 = btoa(unescape(encodeURIComponent(svgContent)));
-    return `data:image/svg+xml;base64,${base64}`;
-  } catch (err) {
-    if (err instanceof TypeError && err.message.includes('fetch')) {
-      throw new Error('Network error: Unable to connect to Gemini API.');
-    }
-    throw err;
-  }
-}
-
 // Claude API call for text generation
 async function callClaudeText(apiKey: string, prompt: string, userMessage: string): Promise<string> {
   // Validate API key
@@ -544,56 +480,6 @@ async function callClaudeText(apiKey: string, prompt: string, userMessage: strin
   }
 }
 
-// Visual placeholder generation (bilingual English/Hindi)
-// Returns a styled SVG that can be used as visual evidence
-async function generateVisualPlaceholder(
-  topic: string,
-  type: string,
-  hospitalName: string,
-  hospitalAddress: string
-): Promise<string> {
-  // Create an SVG placeholder with bilingual text (English and Hindi)
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-      <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#1565C0;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#0D47A1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#bg)"/>
-
-      <!-- Hospital Header -->
-      <text x="400" y="60" font-family="Arial, sans-serif" font-size="28" fill="white" text-anchor="middle" font-weight="bold">${hospitalName}</text>
-      <text x="400" y="90" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" opacity="0.8">${hospitalAddress}</text>
-
-      <!-- Type Badge -->
-      <rect x="300" y="120" width="200" height="40" rx="20" fill="#D32F2F"/>
-      <text x="400" y="147" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle" font-weight="bold">${type.toUpperCase()}</text>
-
-      <!-- Main Content (English) -->
-      <text x="400" y="220" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" font-weight="bold">${topic.substring(0, 40)}${topic.length > 40 ? '...' : ''}</text>
-
-      <!-- Hindi Translation Placeholder -->
-      <text x="400" y="280" font-family="Noto Sans Devanagari, Arial, sans-serif" font-size="20" fill="white" text-anchor="middle" opacity="0.9">हिंदी में जानकारी</text>
-
-      <!-- Content Area -->
-      <rect x="100" y="320" width="600" height="180" rx="10" fill="white" opacity="0.1"/>
-      <text x="400" y="380" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle">Content Area / सामग्री क्षेत्र</text>
-      <text x="400" y="420" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" opacity="0.8">Customize this template with your content</text>
-      <text x="400" y="450" font-family="Noto Sans Devanagari, Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" opacity="0.8">इस टेम्पलेट को अपनी सामग्री के साथ अनुकूलित करें</text>
-
-      <!-- Footer -->
-      <text x="400" y="540" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" opacity="0.7">NABH Accredited | NABH मान्यता प्राप्त</text>
-      <text x="400" y="570" font-family="Arial, sans-serif" font-size="10" fill="white" text-anchor="middle" opacity="0.5">Quality Healthcare for All | सभी के लिए गुणवत्तापूर्ण स्वास्थ्य सेवा</text>
-    </svg>
-  `;
-
-  // Convert SVG to base64 data URL
-  const base64 = btoa(unescape(encodeURIComponent(svg)));
-  return `data:image/svg+xml;base64,${base64}`;
-}
-
 export default function AIEvidenceGenerator() {
   const { chapters } = useNABHStore();
   const [activeTab, setActiveTab] = useState(0);
@@ -624,6 +510,7 @@ export default function AIEvidenceGenerator() {
   const [visualLanguage, setVisualLanguage] = useState('English');
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [selectedVisualColorScheme, setSelectedVisualColorScheme] = useState<ColorScheme>('healthcare-blue');
 
   // Document view mode state (for each document: 0 = HTML preview, 1 = Edit text)
   const [documentViewModes, setDocumentViewModes] = useState<Record<number, number>>({});
@@ -842,36 +729,48 @@ export default function AIEvidenceGenerator() {
     const typeLabel = visualEvidenceTypes.find(t => t.value === visualType)?.label || visualType;
 
     try {
-      let imageUrl: string;
+      // Map visual type to infographic template
+      const templateMap: Record<string, InfographicTemplate> = {
+        'signage': 'minimal-signage',
+        'poster': 'modern-poster',
+        'flyer': 'gradient-card',
+        'banner': 'modern-poster',
+        'infographic': 'healthcare-steps',
+        'checklist': 'compliance-checklist',
+      };
+      
+      const template = templateMap[visualType] || 'modern-poster';
+      
+      // Generate professional SVG infographic
+      const svgContent = generateInfographic({
+        title: visualTopic,
+        titleHindi: visualLanguage.includes('Hindi') ? `${visualTopic} (हिंदी)` : undefined,
+        subtitle: typeLabel,
+        description: `${typeLabel} for ${hospitalConfig.name}. This visual aid is designed for hospital display areas to support NABH accreditation compliance.`,
+        descriptionHindi: visualLanguage.includes('Hindi') ? 'यह विज़ुअल एड NABH मान्यता अनुपालन का समर्थन करने के लिए अस्पताल प्रदर्शन क्षेत्रों के लिए डिज़ाइन किया गया है।' : undefined,
+        keyPoints: [
+          'Follow standard protocols',
+          'Maintain documentation',
+          'Ensure patient safety',
+          'Report any deviations',
+          'Continuous improvement',
+        ],
+        keyPointsHindi: visualLanguage.includes('Hindi') ? [
+          'मानक प्रोटोकॉल का पालन करें',
+          'दस्तावेज़ीकरण बनाए रखें',
+          'रोगी सुरक्षा सुनिश्चित करें',
+          'किसी भी विचलन की रिपोर्ट करें',
+          'निरंतर सुधार',
+        ] : undefined,
+        hospitalName: hospitalConfig.name,
+        hospitalAddress: hospitalConfig.address,
+        template: template,
+        colorScheme: selectedVisualColorScheme,
+        showIcons: true,
+      });
 
-      // Try Gemini API first for generated visual
-      if (geminiApiKey) {
-        try {
-          const fullPrompt = `${typeLabel} for ${hospitalConfig.name}: ${visualTopic}.
-Hospital Address: ${hospitalConfig.address}
-Language: ${visualLanguage}
-Style: Professional healthcare signage, NABH compliant`;
-
-          imageUrl = await callGeminiImageGen(geminiApiKey, fullPrompt);
-        } catch (geminiError) {
-          console.warn('Gemini image generation failed, falling back to placeholder:', geminiError);
-          // Fallback to placeholder if Gemini fails
-          imageUrl = await generateVisualPlaceholder(
-            visualTopic,
-            typeLabel,
-            hospitalConfig.name,
-            hospitalConfig.address
-          );
-        }
-      } else {
-        // Use placeholder if no Gemini API key
-        imageUrl = await generateVisualPlaceholder(
-          visualTopic,
-          typeLabel,
-          hospitalConfig.name,
-          hospitalConfig.address
-        );
-      }
+      // Convert to data URL
+      const imageUrl = svgToDataUrl(svgContent);
 
       setGeneratedImages(prev => [
         {
@@ -1860,7 +1759,7 @@ ${trimmed}
                       sx={{ mb: 2 }}
                     />
 
-                    <FormControl fullWidth size="small" sx={{ mb: 3 }}>
+                    <FormControl fullWidth size="small" sx={{ mb: 2 }}>
                       <InputLabel>Language</InputLabel>
                       <Select
                         value={visualLanguage}
@@ -1873,6 +1772,37 @@ ${trimmed}
                         <MenuItem value="English and Hindi">English and Hindi (Bilingual)</MenuItem>
                       </Select>
                     </FormControl>
+                    
+                    {/* Color Scheme Selector */}
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                      Color Scheme
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+                      {availableColorSchemes.map((scheme) => (
+                        <Tooltip key={scheme.value} title={scheme.label}>
+                          <Box
+                            onClick={() => setSelectedVisualColorScheme(scheme.value)}
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 1,
+                              bgcolor: scheme.preview,
+                              cursor: 'pointer',
+                              border: '3px solid',
+                              borderColor: selectedVisualColorScheme === scheme.value ? 'common.white' : 'transparent',
+                              boxShadow: selectedVisualColorScheme === scheme.value 
+                                ? `0 0 0 2px ${scheme.preview}, 0 4px 8px rgba(0,0,0,0.2)` 
+                                : '0 2px 4px rgba(0,0,0,0.1)',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                transform: 'scale(1.1)',
+                                boxShadow: `0 4px 12px rgba(0,0,0,0.2)`,
+                              },
+                            }}
+                          />
+                        </Tooltip>
+                      ))}
+                    </Box>
 
                     <Button
                       fullWidth
@@ -1881,8 +1811,14 @@ ${trimmed}
                       startIcon={isGeneratingImage ? <CircularProgress size={20} color="inherit" /> : <Icon>auto_awesome</Icon>}
                       onClick={handleGenerateVisualEvidence}
                       disabled={isGeneratingImage || !visualTopic.trim()}
+                      sx={{
+                        background: `linear-gradient(135deg, ${availableColorSchemes.find(s => s.value === selectedVisualColorScheme)?.preview || '#1565C0'} 0%, ${availableColorSchemes.find(s => s.value === selectedVisualColorScheme)?.preview || '#1565C0'}dd 100%)`,
+                        '&:hover': {
+                          background: `linear-gradient(135deg, ${availableColorSchemes.find(s => s.value === selectedVisualColorScheme)?.preview || '#1565C0'}dd 0%, ${availableColorSchemes.find(s => s.value === selectedVisualColorScheme)?.preview || '#1565C0'} 100%)`,
+                        },
+                      }}
                     >
-                      {isGeneratingImage ? 'Generating Image...' : 'Generate Visual Evidence'}
+                      {isGeneratingImage ? 'Generating...' : 'Generate Visual Evidence'}
                     </Button>
                   </CardContent>
                 </Card>
