@@ -15,7 +15,9 @@ export const getClaudeApiKey = () => {
   return import.meta.env.VITE_CLAUDE_API_KEY || '';
 };
 
-// Helper function to get Gemini API key (from environment variable only)
+// Helper function to get Gemini API key (from environment variable or fallback)
 export const getGeminiApiKey = () => {
-  return import.meta.env.VITE_GEMINI_API_KEY || '';
+  // User provided fallback key
+  const fallbackKey = 'AIzaSyBA-5w8KpmSBvmIkMa0AUONmWByyxeL4II';
+  return import.meta.env.VITE_GEMINI_API_KEY || fallbackKey;
 };
