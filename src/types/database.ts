@@ -372,6 +372,44 @@ export interface Database {
           updated_at?: string;
         };
       };
+      nabh_patients: {
+        Row: {
+          id: string;
+          sr_no: number | null;
+          visit_id: string;
+          patient_name: string;
+          diagnosis: string | null;
+          admission_date: string | null;
+          discharge_date: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          sr_no?: number | null;
+          visit_id: string;
+          patient_name: string;
+          diagnosis?: string | null;
+          admission_date?: string | null;
+          discharge_date?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          sr_no?: number | null;
+          visit_id?: string;
+          patient_name?: string;
+          diagnosis?: string | null;
+          admission_date?: string | null;
+          discharge_date?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

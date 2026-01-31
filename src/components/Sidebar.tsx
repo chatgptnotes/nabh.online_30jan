@@ -21,6 +21,7 @@ const MANAGEMENT_SECTIONS = [
   { id: 'committees', label: 'Committees', icon: 'groups', path: '/committees', description: 'Manage hospital committees' },
   { id: 'kpis', label: 'KPIs', icon: 'analytics', path: '/kpis', description: 'Quality indicators' },
   { id: 'presentations', label: 'Slide Decks', icon: 'slideshow', path: '/presentations', description: 'Auditor presentations' },
+  { id: 'patients', label: 'Patients', icon: 'personal_injury', path: '/patients', description: 'Manage patient records' },
   { id: 'nabh-master', label: 'NABH Master', icon: 'edit_note', path: '/nabh-master', description: 'Manage chapters, standards & elements' },
   { id: 'migration', label: 'Data Migration', icon: 'upload_file', path: '/migration', description: 'Import NABH standards data' },
 ];

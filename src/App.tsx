@@ -19,6 +19,7 @@ import KPIDetailPage from './components/KPIDetailPage';
 import SlideDeckPage from './components/SlideDeckPage';
 import DataMigrationPage from './components/DataMigrationPage';
 import NABHMasterPage from './components/NABHMasterPage';
+import PatientsPage from './components/PatientsPage';
 import Footer from './components/Footer';
 import { useNABHStore } from './store/nabhStore';
 
@@ -245,6 +246,7 @@ function MainContent() {
   const isPresentationsPage = location.pathname === '/presentations';
   const isNABHMasterPage = location.pathname === '/nabh-master';
   const isMigrationPage = location.pathname === '/migration';
+  const isPatientsPage = location.pathname === '/patients';
   const isDashboardPage = location.pathname === '/dashboard';
   const isLandingPage = location.pathname === '/' && !selectedChapter;
 
@@ -284,6 +286,10 @@ function MainContent() {
     return <DataMigrationPage />;
   }
 
+  if (isPatientsPage) {
+    return <PatientsPage />;
+  }
+
   if (isDashboardPage) {
     return <Dashboard />;
   }
@@ -304,10 +310,16 @@ function AppContent() {
   useEffect(() => {
     loadDataFromSupabase();
   }, [loadDataFromSupabase]);
+
+  // Scroll to top when route changes or chapter selection changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname, selectedChapter]);
+
   const isAIPage = location.pathname === '/ai-generator';
   const isObjectiveDetailPage = location.pathname.startsWith('/objective/');
   const isKPIDetailPage = location.pathname.startsWith('/kpi/');
-  const isManagementPage = ['/stationery', '/committees', '/kpis', '/presentations', '/nabh-master', '/migration', '/dashboard'].includes(location.pathname) || isKPIDetailPage;
+  const isManagementPage = ['/stationery', '/committees', '/kpis', '/presentations', '/nabh-master', '/migration', '/patients', '/dashboard'].includes(location.pathname) || isKPIDetailPage;
   const isLandingPage = location.pathname === '/' && !selectedChapter;
   const showSidebar = !isAIPage && !isLandingPage && !isObjectiveDetailPage || isManagementPage;
 
