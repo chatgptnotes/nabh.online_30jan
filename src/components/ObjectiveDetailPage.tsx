@@ -36,7 +36,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { useNABHStore } from '../store/nabhStore';
 import type { Status, Priority, ElementCategory, EvidenceFile, YouTubeVideo, TrainingMaterial, SOPDocument } from '../types/nabh';
-import { ASSIGNEE_OPTIONS, HOSPITAL_INFO, getNABHCoordinator } from '../config/hospitalConfig';
+import { ASSIGNEE_OPTIONS, getHospitalInfo, getNABHCoordinator } from '../config/hospitalConfig';
 import { getClaudeApiKey, getGeminiApiKey } from '../lib/supabase';
 import {
   saveObjectiveToSupabase,
@@ -84,7 +84,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 export default function ObjectiveDetailPage() {
   const { chapterId, objectiveId } = useParams<{ chapterId: string; objectiveId: string }>();
   const navigate = useNavigate();
-  const { chapters, updateObjective, setSelectedChapter, isLoadingFromSupabase, loadDataFromSupabase } = useNABHStore();
+  const { chapters, updateObjective, setSelectedChapter, isLoadingFromSupabase, loadDataFromSupabase, selectedHospital } = useNABHStore();
   
   // Load data if not already loaded
   useEffect(() => {
@@ -200,12 +200,13 @@ export default function ObjectiveDetailPage() {
 
   // Hospital config for evidence generation
   const nabhCoordinator = getNABHCoordinator();
+  const currentHospital = getHospitalInfo(selectedHospital);
   const hospitalConfig = {
-    name: HOSPITAL_INFO.name,
-    address: HOSPITAL_INFO.address,
-    phone: HOSPITAL_INFO.phone,
-    email: HOSPITAL_INFO.email,
-    website: HOSPITAL_INFO.website,
+    name: currentHospital.name,
+    address: currentHospital.address,
+    phone: currentHospital.phone,
+    email: currentHospital.email,
+    website: currentHospital.website,
     qualityCoordinator: nabhCoordinator.name,
     qualityCoordinatorDesignation: nabhCoordinator.designation,
   };
@@ -815,7 +816,7 @@ Prefer Indian healthcare context videos. Return ONLY valid JSON array.`;
 Objective Code: ${objective.code}
 Objective Title: ${objective.description}
 Category: ${objective.category}
-Hospital Name: ${HOSPITAL_INFO.name}
+Hospital Name: ${hospitalConfig.name}
 
 Generate a comprehensive SOP that includes:
 1. Purpose and Scope
@@ -991,11 +992,11 @@ Format your response as a numbered list (1-10) with each evidence item on a new 
 
   // Logo URL - use production URL for generated documents stored in database
   const logoUrl = window.location.hostname === 'localhost'
-    ? `${window.location.origin}/hospital-logo.png`
-    : 'https://www.nabh.online/hospital-logo.png';
+    ? `${window.location.origin}${hospitalConfig.name === 'Ayushman Hospital' ? '/ayushman-logo.png' : '/hospital-logo.png'}`
+    : `https://www.nabh.online${hospitalConfig.name === 'Ayushman Hospital' ? '/ayushman-logo.png' : '/hospital-logo.png'}`;
 
   // Get the HTML template for evidence documents
-  const getEvidenceDocumentPrompt = () => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for Hope Hospital.
+  const getEvidenceDocumentPrompt = () => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for ${hospitalConfig.name}.
 
 Generate a complete HTML document for the selected evidence item in ENGLISH ONLY (internal document).
 
@@ -1007,7 +1008,7 @@ Use EXACTLY this HTML template structure (fill in the content sections):
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>[Document Title] - Hope Hospital</title>
+  <title>[Document Title] - ${hospitalConfig.name}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px; line-height: 1.6; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
@@ -1046,8 +1047,8 @@ Use EXACTLY this HTML template structure (fill in the content sections):
 </head>
 <body>
   <div class="header">
-    <img src="${logoUrl}" alt="Hope Hospital" class="logo" onerror="this.style.display='none'">
-    <div class="hospital-address">${hospitalConfig.address} | Phone: +91-9373111709</div>
+    <img src="${logoUrl}" alt="${hospitalConfig.name}" class="logo" onerror="this.style.display='none'">
+    <div class="hospital-address">${hospitalConfig.address} | Phone: ${hospitalConfig.phone}</div>
   </div>
 
   <div class="doc-title">[DOCUMENT TITLE - Replace with appropriate title]</div>
@@ -1126,14 +1127,14 @@ Use EXACTLY this HTML template structure (fill in the content sections):
   </table>
 
   <div class="stamp-area">
-    <div class="stamp-text">HOPE HOSPITAL</div>
+    <div class="stamp-text">${hospitalConfig.name.toUpperCase()}</div>
     <div>QUALITY MANAGEMENT SYSTEM</div>
     <div style="margin-top: 5px; font-size: 10px;">Controlled Document</div>
   </div>
 
   <div class="footer">
-    <strong>Hope Hospital</strong> | ${hospitalConfig.address}<br>
-    Phone: +91-9373111709 | Email: ${hospitalConfig.email} | Website: ${hospitalConfig.website}<br>
+    <strong>${hospitalConfig.name}</strong> | ${hospitalConfig.address}<br>
+    Phone: ${hospitalConfig.phone} | Email: ${hospitalConfig.email} | Website: ${hospitalConfig.website}<br>
     This is a controlled document. Unauthorized copying or distribution is prohibited.
   </div>
 </body>
@@ -1178,7 +1179,7 @@ Generate the complete HTML with all sections filled in appropriately based on th
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Quality Document - Hope Hospital</title>
+  <title>Quality Document - ${hospitalConfig.name}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px; line-height: 1.6; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
@@ -1191,12 +1192,12 @@ Generate the complete HTML with all sections filled in appropriately based on th
 </head>
 <body>
   <div class="header">
-    <img src="${logoUrl}" alt="Hope Hospital" class="logo" onerror="this.style.display='none'">
+    <img src="${logoUrl}" alt="${hospitalConfig.name}" class="logo" onerror="this.style.display='none'">
     <div class="hospital-address">${hospitalConfig.address} | Phone: ${hospitalConfig.phone}</div>
   </div>
   <div class="content">${content}</div>
   <div class="footer">
-    <strong>Hope Hospital</strong> | ${hospitalConfig.address}<br>
+    <strong>${hospitalConfig.name}</strong> | ${hospitalConfig.address}<br>
     Phone: ${hospitalConfig.phone} | Email: ${hospitalConfig.email}
   </div>
 </body>
@@ -1214,6 +1215,12 @@ Generate the complete HTML with all sections filled in appropriately based on th
     processed = processed.replace(/DR\.?\s*MURALI'?S?\s+HOPE\s+HOSPITAL/gi, 'HOPE HOSPITAL');
     processed = processed.replace(/DR\.?\s*MURALI'?S?\s*HOPE\s*HOSPITAL/gi, 'HOPE HOSPITAL');
 
+    // 0. SECOND - If Ayushman Hospital is selected, replace Hope Hospital mentions
+    if (hospitalConfig.name === 'Ayushman Hospital') {
+      processed = processed.replace(/Hope\s+Hospital/gi, 'Ayushman Hospital');
+      processed = processed.replace(/HOPE\s+HOSPITAL/gi, 'AYUSHMAN HOSPITAL');
+    }
+
     // 1. REMOVE the tagline div completely (handles nested divs issue)
     processed = processed.replace(/<div[^>]*class="tagline"[^>]*>[\s\S]*?<\/div>/gi, '');
 
@@ -1221,7 +1228,7 @@ Generate the complete HTML with all sections filled in appropriately based on th
     processed = processed.replace(/Assured\s*\|\s*Committed\s*\|\s*Proficient/gi, '');
 
     // 3. Fix the logo - replace any logo with correct one (2px margin = ~0.5cm spacing)
-    const logoImg = `<img src="${logoUrl}" alt="Hope Hospital" class="logo" style="width: 180px; height: auto; margin: 0 auto 2px; display: block;" onerror="this.style.display='none'">`;
+    const logoImg = `<img src="${logoUrl}" alt="${hospitalConfig.name}" class="logo" style="width: 180px; height: auto; margin: 0 auto 2px; display: block;" onerror="this.style.display='none'">`;
 
     processed = processed.replace(
       /<img[^>]*class="logo"[^>]*>/gi,
@@ -1287,15 +1294,17 @@ Generate the complete HTML with all sections filled in appropriately based on th
 
     // 4c. Inject logo into header if not present - replace hospital name at top with logo + name
     if (!processed.includes(logoUrl)) {
-      // Replace the first "Hope Hospital" heading with logo + name
+      // Replace the first "Hospital Name" heading with logo + name
+      const nameRegex = new RegExp(`<h1[^>]*>${hospitalConfig.name}<\/h1>`, 'i');
       processed = processed.replace(
-        /<h1[^>]*>Hope Hospital<\/h1>/i,
-        `<div style="text-align: center;">${logoImg}<h1 style="margin-top: 5px; font-size: 24px; color: #1565C0;">Hope Hospital</h1></div>`
+        nameRegex,
+        `<div style="text-align: center;">${logoImg}<h1 style="margin-top: 5px; font-size: 24px; color: #1565C0;">${hospitalConfig.name}</h1></div>`
       );
       // Also try with div class hospital-name
+      const divNameRegex = new RegExp(`<div[^>]*class="hospital-name"[^>]*>${hospitalConfig.name}<\/div>`, 'i');
       processed = processed.replace(
-        /<div[^>]*class="hospital-name"[^>]*>Hope Hospital<\/div>/i,
-        `<div style="text-align: center;">${logoImg}<div class="hospital-name" style="margin-top: 5px; font-size: 20px; font-weight: bold; color: #1565C0;">Hope Hospital</div></div>`
+        divNameRegex,
+        `<div style="text-align: center;">${logoImg}<div class="hospital-name" style="margin-top: 5px; font-size: 20px; font-weight: bold; color: #1565C0;">${hospitalConfig.name}</div></div>`
       );
       // Insert logo at the very beginning of header div if no logo found
       processed = processed.replace(
@@ -1307,7 +1316,7 @@ Generate the complete HTML with all sections filled in appropriately based on th
     // 5. Fix hospital-address div to have correct phone
     processed = processed.replace(
       /<div[^>]*class="hospital-address"[^>]*>[\s\S]*?<\/div>/gi,
-      `<div class="hospital-address" style="font-size: 11px; color: #666;">${hospitalConfig.address} | Phone: +91-9373111709</div>`
+      `<div class="hospital-address" style="font-size: 11px; color: #666;">${hospitalConfig.address} | Phone: ${hospitalConfig.phone}</div>`
     );
 
     // 6. Fix dates
@@ -1402,14 +1411,14 @@ Generate the complete HTML with all sections filled in appropriately based on th
     // 9. Fix phone numbers
     processed = processed.replace(
       /Phone:\s*\+?91-?X+|\+91-XXXX-XXXXXX/gi,
-      'Phone: +91-9373111709'
+      `Phone: ${hospitalConfig.phone}`
     );
 
-    // 10. Fix stamp area content - just "HOPE HOSPITAL"
+    // 10. Fix stamp area content
     processed = processed.replace(
-      /<div[^>]*class="stamp-area"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="stamp-area"[^>]*>[\s\S]*?<\/div>/gi,
       `<div class="stamp-area" style="border: 2px solid #1565C0; border-radius: 10px; padding: 15px; text-align: center; margin: 20px 0; background: #f8f9fa;">
-        <div style="font-weight: bold; color: #1565C0; font-size: 14px;">HOPE HOSPITAL</div>
+        <div style="font-weight: bold; color: #1565C0; font-size: 14px;">${hospitalConfig.name.toUpperCase()}</div>
         <div style="font-weight: 600; margin-top: 5px;">QUALITY MANAGEMENT SYSTEM</div>
         <div style="margin-top: 5px; font-size: 11px; color: #666;">Controlled Document</div>
       </div>`
@@ -1426,25 +1435,6 @@ Generate the complete HTML with all sections filled in appropriately based on th
 
     // 13. Final pass - ensure no "Dr. Murali" text remains anywhere
     processed = processed.replace(/Dr\.?\s*Murali/gi, '');
-
-    // 14. Clean up AI-generated placeholder artifacts
-    // Remove "-placeholder">" and similar broken HTML fragments
-    processed = processed.replace(/-placeholder['"]*>/gi, '');
-    processed = processed.replace(/-placeholder/gi, '');
-    processed = processed.replace(/placeholder['"]*>/gi, '');
-    // Remove standalone "Here" text that appears after logo placeholders
-    processed = processed.replace(/>Here</gi, '><');
-    processed = processed.replace(/>[\s]*Here[\s]*</gi, '><');
-    processed = processed.replace(/>\s*Here\s*$/gm, '>');
-    // Remove "Logo Here", "Insert Here", etc.
-    processed = processed.replace(/Logo\s*Here/gi, '');
-    processed = processed.replace(/Insert\s*Here/gi, '');
-    processed = processed.replace(/Image\s*Here/gi, '');
-    processed = processed.replace(/Placeholder\s*Here/gi, '');
-    // Remove empty divs that might result from cleanup
-    processed = processed.replace(/<div[^>]*>\s*<\/div>/gi, '');
-    // Clean up multiple consecutive spaces
-    processed = processed.replace(/>\s{2,}</g, '> <');
 
     return processed;
   };
@@ -1771,18 +1761,18 @@ Generate a complete, professional HTML document for the above requirement. Inclu
 
         const prompt = `Generate a complete HTML document for a hospital register/log book.
 
-HOSPITAL: Hope Hospital, ${hospitalConfig.address}
+HOSPITAL: ${hospitalConfig.name}, ${hospitalConfig.address}
 REGISTER NAME: ${register.name}
 DESCRIPTION: ${register.description}
 NABH OBJECTIVE: ${objective?.code} - ${objective?.title}
 
 Create a professional, print-ready HTML document with:
-1. Hospital header with "HOPE HOSPITAL" branding and address: ${hospitalConfig.address}
+1. Hospital header with "${hospitalConfig.name.toUpperCase()}" branding and address: ${hospitalConfig.address}
 2. Register title, document number, version, and purpose
 3. A table with EXACTLY 18-20 realistic entries spanning the last 9 months (from ${new Date(Date.now() - 270 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN')} to ${new Date().toLocaleDateString('en-IN')})
 4. Columns appropriate for this type of register with proper headers
 5. Signature verification section at bottom
-6. Footer with "HOPE HOSPITAL - QUALITY MANAGEMENT SYSTEM - Controlled Document"
+6. Footer with "${hospitalConfig.name.toUpperCase()} - QUALITY MANAGEMENT SYSTEM - Controlled Document"
 
 MANDATORY - Use these INDIAN NAMES for entries (mix and match):
 Patient names: Rajesh Kumar, Priya Sharma, Amit Patel, Sunita Devi, Mahesh Verma, Kavita Singh, Ramesh Yadav, Anita Gupta, Suresh Reddy, Lakshmi Iyer, Arun Nair, Meena Joshi, Vikram Thakur, Sanjay Desai, Neha Kulkarni, Ravi Pillai, Deepa Menon, Kiran Saxena
@@ -1966,11 +1956,11 @@ Be thorough and extract every piece of text visible in the document. Maintain th
       const geminiApiKey = await getGeminiApiKey();
       if (!geminiApiKey) throw new Error('Gemini API key not configured');
 
-      const prompt = `You are a hospital document designer for Hope Hospital. Create a professionally designed HTML document based on the following extracted content from an existing hospital document.
+      const prompt = `You are a hospital document designer for ${hospitalConfig.name}. Create a professionally designed HTML document based on the following extracted content from an existing hospital document.
 
-HOSPITAL: Hope Hospital
+HOSPITAL: ${hospitalConfig.name}
 ADDRESS: ${hospitalConfig.address}
-PHONE: +91-9373111709
+PHONE: ${hospitalConfig.phone}
 
 EXTRACTED CONTENT FROM ORIGINAL DOCUMENT:
 ${extractedDocumentText}
@@ -2173,8 +2163,8 @@ Provide only the Hindi explanation, no English text. The explanation should be c
         descriptionHindi: objective.hindiExplanation,
         keyPoints: keyPoints,
         keyPointsHindi: [], // Can be populated if Hindi points are available
-        hospitalName: HOSPITAL_INFO.name,
-        hospitalAddress: HOSPITAL_INFO.address,
+        hospitalName: hospitalConfig.name,
+        hospitalAddress: hospitalConfig.address,
         template: selectedInfographicTemplate,
         colorScheme: selectedColorScheme,
         showIcons: true,

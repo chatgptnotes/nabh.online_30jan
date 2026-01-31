@@ -8,7 +8,11 @@ import Button from '@mui/material/Button';
 import Icon from '@mui/material/Icon';
 import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import { useState } from 'react';
 import { useNABHStore } from '../store/nabhStore';
+import { HOSPITALS, getHospitalInfo } from '../config/hospitalConfig';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -17,8 +21,9 @@ interface HeaderProps {
 export default function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setSelectedChapter } = useNABHStore();
+  const { setSelectedChapter, selectedHospital, setSelectedHospital } = useNABHStore();
   const isGeneratorPage = location.pathname === '/ai-generator';
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleHomeClick = () => {
     setSelectedChapter(null);
@@ -28,6 +33,21 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const handleGeneratorClick = () => {
     navigate('/ai-generator');
   };
+
+  const handleHospitalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleHospitalMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleHospitalSelect = (hospitalId: string) => {
+    setSelectedHospital(hospitalId);
+    handleHospitalMenuClose();
+  };
+
+  const currentHospital = getHospitalInfo(selectedHospital);
 
   return (
     <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
@@ -49,6 +69,48 @@ export default function Header({ onMenuClick }: HeaderProps) {
             NABH Evidences
           </Typography>
         </Box>
+        
+        {/* Hospital Switcher */}
+        <Box sx={{ ml: 4, display: 'flex', alignItems: 'center' }}>
+          <Button
+            color="inherit"
+            onClick={handleHospitalMenuOpen}
+            endIcon={<Icon>arrow_drop_down</Icon>}
+            sx={{
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 500,
+              bgcolor: 'rgba(255,255,255,0.1)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+              px: 2
+            }}
+          >
+            {currentHospital.name}
+          </Button>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleHospitalMenuClose}
+            PaperProps={{
+              elevation: 4,
+              sx: { mt: 1.5, minWidth: 200 }
+            }}
+          >
+            {Object.values(HOSPITALS).map((hospital) => (
+              <MenuItem
+                key={hospital.id}
+                selected={selectedHospital === hospital.id}
+                onClick={() => handleHospitalSelect(hospital.id)}
+              >
+                <Icon sx={{ mr: 1, fontSize: 20, color: selectedHospital === hospital.id ? 'primary.main' : 'text.secondary' }}>
+                  {selectedHospital === hospital.id ? 'check_circle' : 'radio_button_unchecked'}
+                </Icon>
+                {hospital.name}
+              </MenuItem>
+            ))}
+          </Menu>
+        </Box>
+
         <Box sx={{ flexGrow: 1 }} />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Tooltip title="Dashboard">

@@ -26,7 +26,8 @@ import Step from '@mui/material/Step';
 import StepLabel from '@mui/material/StepLabel';
 import LinearProgress from '@mui/material/LinearProgress';
 import { extractFromDocument, generateImprovedDocument, analyzeDocument } from '../services/documentExtractor';
-import { HOSPITAL_INFO } from '../config/hospitalConfig';
+import { getHospitalInfo } from '../config/hospitalConfig';
+import { useNABHStore } from '../store/nabhStore';
 
 interface StationeryItem {
   id: string;
@@ -65,6 +66,9 @@ const STATIONERY_CATEGORIES = [
 const WORKFLOW_STEPS = ['Upload Document', 'Extract Content', 'Add Suggestions', 'Generate Improved'];
 
 export default function StationeryPage() {
+  const { selectedHospital } = useNABHStore();
+  const hospitalConfig = getHospitalInfo(selectedHospital);
+  
   const [stationeryItems, setStationeryItems] = useState<StationeryItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -188,7 +192,7 @@ export default function StationeryPage() {
         extractedText,
         'stationery',
         userSuggestion,
-        HOSPITAL_INFO.name
+        hospitalConfig.name
       );
 
       if (content) {

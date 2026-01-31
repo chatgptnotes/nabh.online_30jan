@@ -29,8 +29,9 @@ import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import { NABH_TEAM, HOSPITAL_INFO } from '../config/hospitalConfig';
+import { NABH_TEAM, getHospitalInfo } from '../config/hospitalConfig';
 import { extractFromDocument, extractCommitteeData, generateImprovedDocument } from '../services/documentExtractor';
+import { useNABHStore } from '../store/nabhStore';
 
 interface CommitteeMember {
   name: string;
@@ -114,6 +115,9 @@ const NABH_MANDATORY_COMMITTEES = [
 const UPLOAD_WORKFLOW_STEPS = ['Upload Document', 'Extract Data', 'Review & Edit', 'Generate SOP'];
 
 export default function CommitteesPage() {
+  const { selectedHospital } = useNABHStore();
+  const hospitalConfig = getHospitalInfo(selectedHospital);
+  
   const [committees, setCommittees] = useState<Committee[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
@@ -308,7 +312,7 @@ export default function CommitteesPage() {
         extractedText,
         'committee',
         userSuggestions,
-        HOSPITAL_INFO.name
+        hospitalConfig.name
       );
       setGeneratedSOP(sop);
       setUploadWorkflowStep(3);

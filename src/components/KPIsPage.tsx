@@ -32,13 +32,14 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardActionArea from '@mui/material/CardActionArea';
-import { HOSPITAL_INFO } from '../config/hospitalConfig';
+import { getHospitalInfo } from '../config/hospitalConfig';
 import { NABH_KPIS, NABH_KPI_CATEGORIES, generateSampleKPIData } from '../data/kpiData';
 import type { KPIDefinition } from '../data/kpiData';
 import { extractFromDocument, extractKPIData, generateImprovedDocument } from '../services/documentExtractor';
 import { generateAllKPIDataWithScenario } from '../services/kpiDataGenerator';
 import { saveKPIGraph, loadAllKPIGraphs } from '../services/kpiStorage';
 import type { KPIGraphRecord } from '../services/kpiStorage';
+import { useNABHStore } from '../store/nabhStore';
 
 interface KPIEntry {
   month: string;
@@ -51,6 +52,9 @@ const UPLOAD_WORKFLOW_STEPS = ['Upload Document', 'Extract KPIs', 'Review & Edit
 
 export default function KPIsPage() {
   const navigate = useNavigate();
+  const { selectedHospital } = useNABHStore();
+  const hospitalConfig = getHospitalInfo(selectedHospital);
+  
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table' | 'graphs'>('cards');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
@@ -368,7 +372,7 @@ export default function KPIsPage() {
         extractedText,
         'kpi',
         userSuggestions,
-        HOSPITAL_INFO.name
+        hospitalConfig.name
       );
       setGeneratedReport(report);
       setUploadWorkflowStep(3);
@@ -425,7 +429,7 @@ export default function KPIsPage() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>NABH KPI Dashboard - ${HOSPITAL_INFO.name}</title>
+        <title>NABH KPI Dashboard - ${hospitalConfig.name}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Times New Roman', serif; padding: 15mm; line-height: 1.5; }
@@ -449,8 +453,8 @@ export default function KPIsPage() {
       </head>
       <body>
         <div class="header">
-          <div class="hospital-name">${HOSPITAL_INFO.name}</div>
-          <div style="font-size: 12px;">${HOSPITAL_INFO.address} | ${HOSPITAL_INFO.phone}</div>
+          <div class="hospital-name">${hospitalConfig.name}</div>
+          <div style="font-size: 12px;">${hospitalConfig.address} | ${hospitalConfig.phone}</div>
           <div class="report-title">NABH KEY PERFORMANCE INDICATORS DASHBOARD</div>
           <div style="font-size: 12px; margin-top: 10px;">Report Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
         </div>
@@ -528,7 +532,7 @@ export default function KPIsPage() {
 
         <div class="footer">
           <p>This report is generated as per NABH SHCO Standards 3rd Edition, August 2022</p>
-          <p>${HOSPITAL_INFO.name} | Quality Management System | Controlled Document</p>
+          <p>${hospitalConfig.name} | Quality Management System | Controlled Document</p>
         </div>
       </body>
       </html>

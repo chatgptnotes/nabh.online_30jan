@@ -11,7 +11,8 @@
  * - SVG output for scalability
  */
 
-import { HOSPITAL_INFO } from '../config/hospitalConfig';
+// Removed static import of HOSPITAL_INFO to support multi-hospital architecture
+// import { HOSPITAL_INFO } from '../config/hospitalConfig';
 
 // ============================================
 // Types & Interfaces
@@ -305,8 +306,8 @@ const wrapText = (text: string, maxWidth: number, fontSize: number): string[] =>
 const generateModernPoster = (config: InfographicConfig, colors: ColorPalette): string => {
   const width = config.width || 800;
   const height = config.height || 1100;
-  const hospitalName = config.hospitalName || HOSPITAL_INFO.name;
-  const hospitalAddress = config.hospitalAddress || HOSPITAL_INFO.address;
+  const hospitalName = config.hospitalName || "Hospital Name";
+  const hospitalAddress = config.hospitalAddress || "";
   
   const keyPoints = config.keyPoints || [];
   const keyPointsHindi = config.keyPointsHindi || [];
@@ -464,7 +465,7 @@ const generateModernPoster = (config: InfographicConfig, colors: ColorPalette): 
 const generateGradientCard = (config: InfographicConfig, colors: ColorPalette): string => {
   const width = config.width || 800;
   const height = config.height || 600;
-  const hospitalName = config.hospitalName || HOSPITAL_INFO.name;
+  const hospitalName = config.hospitalName || "Hospital Name";
   
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
@@ -569,7 +570,7 @@ const generateGradientCard = (config: InfographicConfig, colors: ColorPalette): 
 const generateMinimalSignage = (config: InfographicConfig, colors: ColorPalette): string => {
   const width = config.width || 600;
   const height = config.height || 400;
-  const hospitalName = config.hospitalName || HOSPITAL_INFO.name;
+  const hospitalName = config.hospitalName || "Hospital Name";
   
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
@@ -639,7 +640,7 @@ const generateMinimalSignage = (config: InfographicConfig, colors: ColorPalette)
 const generateHealthcareSteps = (config: InfographicConfig, colors: ColorPalette): string => {
   const width = config.width || 800;
   const height = config.height || 1000;
-  const hospitalName = config.hospitalName || HOSPITAL_INFO.name;
+  const hospitalName = config.hospitalName || "Hospital Name";
   const keyPoints = config.keyPoints || [];
   const keyPointsHindi = config.keyPointsHindi || [];
   
@@ -746,7 +747,7 @@ const generateHealthcareSteps = (config: InfographicConfig, colors: ColorPalette
 const generateComplianceChecklist = (config: InfographicConfig, colors: ColorPalette): string => {
   const width = config.width || 800;
   const height = config.height || 900;
-  const hospitalName = config.hospitalName || HOSPITAL_INFO.name;
+  const hospitalName = config.hospitalName || "Hospital Name";
   const keyPoints = config.keyPoints || [];
   const keyPointsHindi = config.keyPointsHindi || [];
   

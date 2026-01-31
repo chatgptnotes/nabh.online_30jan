@@ -56,6 +56,7 @@ interface NABHStore {
   filterPriority: string;
   filterCategory: ElementCategory | 'all';
   showCoreOnly: boolean;
+  selectedHospital: string; // New state for selected hospital
   isLoadingFromSupabase: boolean;
 
   setSelectedChapter: (chapterId: string | null) => void;
@@ -65,6 +66,7 @@ interface NABHStore {
   setFilterPriority: (priority: string) => void;
   setFilterCategory: (category: ElementCategory | 'all') => void;
   setShowCoreOnly: (show: boolean) => void;
+  setSelectedHospital: (hospitalId: string) => void; // New action
   updateObjective: (chapterId: string, objectiveId: string, updates: Partial<ObjectiveElement>) => void;
   getFilteredObjectives: (chapterId: string) => ObjectiveElement[];
   loadDataFromSupabase: () => Promise<void>;
@@ -83,6 +85,7 @@ export const useNABHStore = create<NABHStore>()(
       filterPriority: 'all',
       filterCategory: 'all',
       showCoreOnly: false,
+      selectedHospital: 'hope', // Default hospital
       isLoadingFromSupabase: false,
 
       setSelectedChapter: (chapterId) => set({ selectedChapter: chapterId, selectedObjective: null }),
@@ -92,6 +95,7 @@ export const useNABHStore = create<NABHStore>()(
       setFilterPriority: (priority) => set({ filterPriority: priority }),
       setFilterCategory: (category) => set({ filterCategory: category }),
       setShowCoreOnly: (show) => set({ showCoreOnly: show }),
+      setSelectedHospital: (hospitalId) => set({ selectedHospital: hospitalId }), // New action implementation
 
       updateObjective: (chapterId, objectiveId, updates) =>
         set((state) => ({
@@ -359,6 +363,7 @@ export const useNABHStore = create<NABHStore>()(
           filterPriority: 'all',
           filterCategory: 'all',
           showCoreOnly: false,
+          selectedHospital: 'hope',
           isLoadingFromSupabase: false,
         };
       },

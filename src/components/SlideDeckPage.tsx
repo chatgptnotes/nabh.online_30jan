@@ -26,8 +26,9 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import { getGeminiApiKey } from '../lib/supabase';
-import { HOSPITAL_INFO } from '../config/hospitalConfig';
+import { getHospitalInfo } from '../config/hospitalConfig';
 import { extractFromDocument, generateImprovedDocument } from '../services/documentExtractor';
+import { useNABHStore } from '../store/nabhStore';
 
 interface Slide {
   id: string;
@@ -79,6 +80,9 @@ const PRESENTATION_TEMPLATES = [
 ];
 
 export default function SlideDeckPage() {
+  const { selectedHospital } = useNABHStore();
+  const hospitalConfig = getHospitalInfo(selectedHospital);
+  
   const [presentations, setPresentations] = useState<Presentation[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -120,7 +124,7 @@ export default function SlideDeckPage() {
     localStorage.setItem('nabh_presentations', JSON.stringify(presentations));
   }, [presentations]);
 
-  const generateSlideContent = async (title: string, section: string, hospitalInfo: typeof HOSPITAL_INFO) => {
+  const generateSlideContent = async (title: string, section: string, hospitalInfo: typeof hospitalConfig) => {
     const geminiApiKey = getGeminiApiKey();
     if (!geminiApiKey) return '';
 
@@ -177,14 +181,14 @@ Do not include any HTML tags.`;
       const slides: Slide[] = [{
         id: `slide_${Date.now()}_0`,
         title: newPresentation.name,
-        content: `${HOSPITAL_INFO.name}\n${HOSPITAL_INFO.address}\n\nPresentation for NABH Assessment`,
+        content: `${hospitalConfig.name}\n${hospitalConfig.address}\n\nPresentation for NABH Assessment`,
         type: 'title',
         notes: 'Welcome the assessors and introduce the hospital.',
       }];
 
       // Generate content slides
       for (let i = 0; i < sections.length; i++) {
-        const content = await generateSlideContent(newPresentation.name, sections[i], HOSPITAL_INFO);
+        const content = await generateSlideContent(newPresentation.name, sections[i], hospitalConfig);
         slides.push({
           id: `slide_${Date.now()}_${i + 1}`,
           title: sections[i],
@@ -278,7 +282,7 @@ Do not include any HTML tags.`;
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${presentation.name} - ${HOSPITAL_INFO.name}</title>
+  <title>${presentation.name} - ${hospitalConfig.name}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; }
@@ -299,10 +303,10 @@ Do not include any HTML tags.`;
 <body>
 ${presentation.slides.map(slide => `
   <div class="slide ${slide.type}">
-    ${slide.type === 'title' ? `<img src="${HOSPITAL_INFO.logo}" alt="Logo" class="hospital-logo" onerror="this.style.display='none'">` : ''}
+    ${slide.type === 'title' ? `<img src="${hospitalConfig.logo}" alt="Logo" class="hospital-logo" onerror="this.style.display='none'">` : ''}
     <h2>${slide.title}</h2>
     <div class="content-text">${slide.content}</div>
-    <div class="footer">${HOSPITAL_INFO.name} | ${HOSPITAL_INFO.address}</div>
+    <div class="footer">${hospitalConfig.name} | ${hospitalConfig.address}</div>
   </div>
 `).join('')}
 </body>
@@ -419,7 +423,7 @@ ${presentation.slides.map(slide => `
         extractedPresentationText,
         'presentation',
         userSuggestions,
-        HOSPITAL_INFO.name
+        hospitalConfig.name
       );
       setGeneratedPresentationHTML(html);
       setUploadWorkflowStep(3);

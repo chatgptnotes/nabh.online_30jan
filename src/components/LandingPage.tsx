@@ -10,7 +10,7 @@ import Icon from '@mui/material/Icon';
 import Chip from '@mui/material/Chip';
 import { alpha } from '@mui/material/styles';
 import { useNABHStore } from '../store/nabhStore';
-import { HOSPITAL_INFO, NABH_TEAM } from '../config/hospitalConfig';
+import { getHospitalInfo, NABH_TEAM } from '../config/hospitalConfig';
 
 const features = [
   {
@@ -60,7 +60,8 @@ const stats = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { chapters, setSelectedChapter } = useNABHStore();
+  const { chapters, setSelectedChapter, selectedHospital } = useNABHStore();
+  const hospitalConfig = getHospitalInfo(selectedHospital);
 
   const handleGetStarted = () => {
     if (chapters.length > 0) {
@@ -83,6 +84,9 @@ export default function LandingPage() {
     0
   );
   const progressPercentage = totalElements > 0 ? Math.round((completedElements / totalElements) * 100) : 0;
+
+  // Use Ayushman logo if selected, otherwise default
+  const logoUrl = hospitalConfig.id === 'ayushman' ? '/ayushman-logo.png' : '/hospital-logo.png';
 
   return (
     <Box>
@@ -160,7 +164,7 @@ export default function LandingPage() {
                     lineHeight: 1.6,
                   }}
                 >
-                  Your complete solution for NABH accreditation preparation. Manage evidence, track progress, and generate professional documentation for {HOSPITAL_INFO.name}.
+                  Your complete solution for NABH accreditation preparation. Manage evidence, track progress, and generate professional documentation for {hospitalConfig.name}.
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                   <Button
@@ -227,15 +231,15 @@ export default function LandingPage() {
                   }}
                 >
                   <img
-                    src={HOSPITAL_INFO.logo}
-                    alt={HOSPITAL_INFO.name}
+                    src={logoUrl}
+                    alt={hospitalConfig.name}
                     style={{ height: 120, objectFit: 'contain', marginBottom: 8 }}
                   />
                   <Typography variant="h6" color="text.primary" fontWeight={700}>
-                    {HOSPITAL_INFO.name}
+                    {hospitalConfig.name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {HOSPITAL_INFO.address}
+                    {hospitalConfig.address}
                   </Typography>
                   <Box
                     sx={{
@@ -471,16 +475,16 @@ export default function LandingPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <img
-                src={HOSPITAL_INFO.logo}
-                alt={HOSPITAL_INFO.name}
+                src={logoUrl}
+                alt={hospitalConfig.name}
                 style={{ height: 40, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
               />
               <Box>
                 <Typography variant="body1" fontWeight={600}>
-                  {HOSPITAL_INFO.name}
+                  {hospitalConfig.name}
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                  {HOSPITAL_INFO.address}
+                  {hospitalConfig.address}
                 </Typography>
               </Box>
             </Box>

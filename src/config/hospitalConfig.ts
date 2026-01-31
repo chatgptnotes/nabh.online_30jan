@@ -1,6 +1,6 @@
 /**
  * Hospital Configuration and Team Structure
- * Hope Hospital - NABH Accreditation Team
+ * Supports Multi-Hospital Architecture: Hope Hospital & Ayushman Hospital
  */
 
 export interface TeamMember {
@@ -12,6 +12,7 @@ export interface TeamMember {
 }
 
 export interface HospitalInfo {
+  id: 'hope' | 'ayushman';
   name: string;
   address: string;
   phone: string;
@@ -20,17 +21,40 @@ export interface HospitalInfo {
   logo: string;
 }
 
-// Hospital Information
-export const HOSPITAL_INFO: HospitalInfo = {
-  name: "Hope Hospital",
-  address: '2, Teka Naka, Nagpur',
-  phone: '+91-XXXX-XXXXXX',
-  email: 'info@hopehospital.com',
-  website: 'www.hopehospital.com',
-  logo: '/hospital-logo.png',
+// Hospital Configurations
+export const HOSPITALS: Record<string, HospitalInfo> = {
+  hope: {
+    id: 'hope',
+    name: "Hope Hospital",
+    address: '2, Teka Naka, Nagpur',
+    phone: '+91-XXXX-XXXXXX',
+    email: 'info@hopehospital.com',
+    website: 'www.hopehospital.com',
+    logo: '/hospital-logo.png',
+  },
+  ayushman: {
+    id: 'ayushman',
+    name: "Ayushman Hospital",
+    address: 'Shriwardhan Complex, Ramdaspeth, Nagpur',
+    phone: '+91-70309-74619',
+    email: 'ayushmanhos@gmail.com',
+    website: 'www.ayushmannagpurhospital.com',
+    logo: '/hospital-logo.png', // Reuse logo or use different one if available
+  }
 };
 
-// NABH Team Structure
+// Default Hospital
+export const DEFAULT_HOSPITAL_ID = 'hope';
+
+// Helper to get currently selected hospital (defaults to Hope)
+export const getHospitalInfo = (hospitalId: string = DEFAULT_HOSPITAL_ID): HospitalInfo => {
+  return HOSPITALS[hospitalId] || HOSPITALS[DEFAULT_HOSPITAL_ID];
+};
+
+// Re-export HOSPITAL_INFO for backward compatibility (points to Hope by default)
+export const HOSPITAL_INFO = HOSPITALS[DEFAULT_HOSPITAL_ID];
+
+// NABH Team Structure (Shared across hospitals for now, can be split if needed)
 export const NABH_TEAM: TeamMember[] = [
   {
     name: 'Dr. Shiraz Sheikh',

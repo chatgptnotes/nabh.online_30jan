@@ -31,7 +31,7 @@ import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import CardMedia from '@mui/material/CardMedia';
 import { useNABHStore } from '../store/nabhStore';
-import { HOSPITAL_INFO, getNABHCoordinator, NABH_ASSESSOR_PROMPT } from '../config/hospitalConfig';
+import { getHospitalInfo, getNABHCoordinator, NABH_ASSESSOR_PROMPT } from '../config/hospitalConfig';
 import { getClaudeApiKey, getGeminiApiKey } from '../lib/supabase';
 import {
   generateInfographic,
@@ -68,16 +68,8 @@ interface HospitalConfig {
 
 const nabhCoordinator = getNABHCoordinator();
 
-const defaultHospitalConfig: HospitalConfig = {
-  name: HOSPITAL_INFO.name,
-  address: HOSPITAL_INFO.address,
-  phone: HOSPITAL_INFO.phone,
-  email: HOSPITAL_INFO.email,
-  website: HOSPITAL_INFO.website,
-  qualityCoordinator: nabhCoordinator.name,
-  qualityCoordinatorDesignation: nabhCoordinator.designation,
-  logo: HOSPITAL_INFO.logo,
-};
+// NOTE: We don't initialize this statically anymore because the selected hospital can change.
+// Instead, we initialize state in the component.
 
 const defaultListPrompt = NABH_ASSESSOR_PROMPT;
 
@@ -481,17 +473,45 @@ async function callClaudeText(apiKey: string, prompt: string, userMessage: strin
 }
 
 export default function AIEvidenceGenerator() {
-  const { chapters } = useNABHStore();
+  const { chapters, selectedHospital } = useNABHStore();
+  const currentHospital = getHospitalInfo(selectedHospital);
+  
   const [activeTab, setActiveTab] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const [selectedChapter, setSelectedChapter] = useState('');
   const [selectedObjective, setSelectedObjective] = useState('');
   const [description, setDescription] = useState('');
   const [listPrompt, setListPrompt] = useState(defaultListPrompt);
-  const [hospitalConfig, setHospitalConfig] = useState<HospitalConfig>(() => {
-    const saved = localStorage.getItem('hospital_config');
-    return saved ? JSON.parse(saved) : defaultHospitalConfig;
+  
+  // Initialize config from store instead of static default
+  const [hospitalConfig, setHospitalConfig] = useState<HospitalConfig>({
+    name: currentHospital.name,
+    address: currentHospital.address,
+    phone: currentHospital.phone,
+    email: currentHospital.email,
+    website: currentHospital.website,
+    qualityCoordinator: nabhCoordinator.name,
+    qualityCoordinatorDesignation: nabhCoordinator.designation,
+    logo: currentHospital.logo,
   });
+
+  // Update local state when global hospital selection changes
+  // But only if user hasn't manually edited the local config
+  const [hasManualConfigEdits, setHasManualConfigEdits] = useState(false);
+  
+  if (hospitalConfig.name !== currentHospital.name && !hasManualConfigEdits) {
+     setHospitalConfig({
+      name: currentHospital.name,
+      address: currentHospital.address,
+      phone: currentHospital.phone,
+      email: currentHospital.email,
+      website: currentHospital.website,
+      qualityCoordinator: nabhCoordinator.name,
+      qualityCoordinatorDesignation: nabhCoordinator.designation,
+      logo: currentHospital.logo,
+    });
+  }
+
   // API keys from environment variables
   const claudeApiKey = getClaudeApiKey();
   const geminiApiKey = getGeminiApiKey();
@@ -537,7 +557,8 @@ export default function AIEvidenceGenerator() {
   const handleHospitalConfigChange = (field: keyof HospitalConfig, value: string) => {
     const newConfig = { ...hospitalConfig, [field]: value };
     setHospitalConfig(newConfig);
-    localStorage.setItem('hospital_config', JSON.stringify(newConfig));
+    setHasManualConfigEdits(true);
+    // Removed local storage persistence to prefer store-based context switching
   };
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {

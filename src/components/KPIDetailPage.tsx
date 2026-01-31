@@ -35,7 +35,8 @@ import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import { NABH_KPIS, NABH_KPI_CATEGORIES, getKPIById, generateSampleKPIData } from '../data/kpiData';
 import type { KPIDefinition } from '../data/kpiData';
-import { HOSPITAL_INFO } from '../config/hospitalConfig';
+import { getHospitalInfo } from '../config/hospitalConfig';
+import { useNABHStore } from '../store/nabhStore';
 import { saveKPIGraph, loadKPIGraphHistory, restoreKPIGraph, deleteKPIGraph } from '../services/kpiStorage';
 import type { KPIGraphRecord } from '../services/kpiStorage';
 import { processKPIEditPrompt, getQuickPresets, getKPISamplePrompts } from '../services/kpiAIService';
@@ -68,6 +69,9 @@ function TabPanel(props: TabPanelProps) {
 export default function KPIDetailPage() {
   const { kpiId } = useParams<{ kpiId: string }>();
   const navigate = useNavigate();
+  const { selectedHospital } = useNABHStore();
+  const hospitalConfig = getHospitalInfo(selectedHospital);
+  
   const [kpi, setKpi] = useState<KPIDefinition | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [kpiData, setKpiData] = useState<KPIDataEntry[]>([]);
@@ -412,8 +416,8 @@ export default function KPIDetailPage() {
       </head>
       <body>
         <div class="header">
-          <div class="hospital-name">${HOSPITAL_INFO.name}</div>
-          <div style="font-size: 12px;">${HOSPITAL_INFO.address}</div>
+          <div class="hospital-name">${hospitalConfig.name}</div>
+          <div style="font-size: 12px;">${hospitalConfig.address}</div>
           <div class="report-title">KEY PERFORMANCE INDICATOR REPORT</div>
           <div style="font-size: 12px;">KPI ${kpi.number}: ${kpi.name}</div>
         </div>
@@ -484,7 +488,7 @@ export default function KPIDetailPage() {
         </div>
 
         <div class="stamp">
-          <div style="font-weight: bold;">${HOSPITAL_INFO.name.toUpperCase()}</div>
+          <div style="font-weight: bold;">${hospitalConfig.name.toUpperCase()}</div>
           <div style="font-size: 10px;">QUALITY MANAGEMENT SYSTEM</div>
           <div style="font-size: 10px;">Controlled Document</div>
         </div>
@@ -597,8 +601,8 @@ export default function KPIDetailPage() {
           </head>
           <body>
             <div class="header">
-              <div class="hospital-name">${HOSPITAL_INFO.name}</div>
-              <div style="font-size: 12px;">${HOSPITAL_INFO.address}</div>
+              <div class="hospital-name">${hospitalConfig.name}</div>
+              <div style="font-size: 12px;">${hospitalConfig.address}</div>
               <div class="kpi-name">KPI ${kpi.number}: ${kpi.name}</div>
             </div>
 
@@ -624,7 +628,7 @@ export default function KPIDetailPage() {
             <div class="footer">
               <p><strong>Formula:</strong> ${kpi.formula}</p>
               <p style="margin-top: 5px;">Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-              <p>${HOSPITAL_INFO.name} | Quality Management System</p>
+              <p>${hospitalConfig.name} | Quality Management System</p>
             </div>
 
             <script>
