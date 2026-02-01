@@ -17,7 +17,7 @@ export const getClaudeApiKey = () => {
 
 // Helper function to get Gemini API key (from environment variable or fallback)
 export const getGeminiApiKey = () => {
-  // Hardcoded key for KeyGenius project (Provided by user)
-  const fallbackKey = 'AIzaSyBA-5w8KpmSBvmIkMa0AUONmWByyxeL4II';
+  // Fallback key for production deployment
+  const fallbackKey = 'AIzaSyDq0UDfY02uLaxMhDWapiJSL_YVPCDAea4';
   return import.meta.env.VITE_GEMINI_API_KEY || fallbackKey;
 };

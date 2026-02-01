@@ -1,8 +1,5 @@
 # CLAUDE.md - NABH Evidence Creator
 
-## MISSION
-Fix and fully implement the "Search NABH Training Videos" feature in the Training Videos section of the ObjectiveDetailPage. The button must be clearly visible, functional, and search YouTube for NABH-related training videos.
-
 ## TECH STACK
 - React 18 + TypeScript
 - Vite build system
@@ -12,28 +9,41 @@ Fix and fully implement the "Search NABH Training Videos" feature in the Trainin
 - Vercel deployment
 
 ## CURRENT STATUS
-- Multi-Hospital Architecture implemented (Hope & Ayushman Hospitals).
-- Dynamic logo and branding based on selected hospital.
-- Header dropdown allows switching between hospitals.
-- Evidence generation now respects the selected hospital context.
-- Merged "Patient Management" features.
+- Multi-Hospital Architecture implemented (Hope & Ayushman Hospitals)
+- Dynamic logo and branding based on selected hospital
+- Header dropdown allows switching between hospitals
+- Evidence generation uses REAL Hope Hospital patient database
+- Real patient data fetched from Supabase nabh_patients table
+- Real staff data fetched from Supabase nabh_team_members table
+- Realistic SVG signatures for Jagruti, Gaurav, and Dr. Shiraz Sheikh
+- Evidence documents now show filled formats with actual patient names and Visit IDs
+- Successfully deployed to production
 
 ## MISSION
-Deploy the application to production and monitor for any branding consistency issues.
+Monitor production deployment and ensure evidence generation uses real database data correctly.
 
-## ACTION PLAN
-1. Verify code structure [COMPLETED]
-2. Implement Multi-Hospital Config [COMPLETED]
-3. Add Hospital Switcher UI [COMPLETED]
-4. Dynamic Evidence Generation [COMPLETED]
-5. Test Build [COMPLETED - Build Passed]
-6. Deploy to Production [Ready]
+## COMPLETED FEATURES
+1. Multi-Hospital Config [COMPLETED]
+2. Hospital Switcher UI [COMPLETED]
+3. Dynamic Evidence Generation [COMPLETED]
+4. Real Patient Database Integration [COMPLETED]
+5. Realistic Signatures [COMPLETED]
+6. Build & Test [COMPLETED]
+7. Production Deployment [COMPLETED]
+
+## PRODUCTION URLS
+- Primary: https://nabhonline.vercel.app
+- Latest: https://nabhonline-30f0vyiz5-chatgptnotes-6366s-projects.vercel.app
 
 ## QUALITY BARS
-- Zero TypeScript errors.
-- Seamless switching between hospitals without page reload.
-- Evidence documents generate with correct hospital branding.
+- Zero TypeScript errors
+- Seamless hospital switching without page reload
+- Evidence documents use REAL patient data from database
+- Filled formats with actual patient names, Visit IDs, dates
+- Professional signatures embedded in all documents
 
 ## VERSION TRACKING
-- Version: 1.1.0
+- Version: 1.2.0
+- Date: 2025-02-01
+- Repository: nabh.online_30jan
 - Footer shows version, date, repo name
