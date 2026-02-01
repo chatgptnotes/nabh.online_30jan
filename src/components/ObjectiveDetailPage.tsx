@@ -57,6 +57,7 @@ import {
   type ColorScheme,
 } from '../services/infographicGenerator';
 import { generateGeminiInfographic } from '../services/geminiService';
+import { getRelevantData } from '../services/hopeHospitalDatabase';
 
 // Expandable TextField styles
 const expandableTextFieldSx = {
@@ -1499,7 +1500,94 @@ Only output the JSON object, nothing else.`;
     : `https://www.nabh.online${hospitalConfig.name === 'Ayushman Hospital' ? '/ayushman-logo.png' : '/hospital-logo.png'}`;
 
   // Get the HTML template for evidence documents
-  const getEvidenceDocumentPrompt = () => `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for ${hospitalConfig.name}.
+  const getEvidenceDocumentPrompt = (evidenceItem?: string) => {
+    // Get relevant Hope Hospital data based on evidence type
+    const relevantData = evidenceItem ? getRelevantData(evidenceItem) : {};
+
+    // Format data for prompt
+    const dataContext = hospitalConfig.name === 'Hope Hospital' ? `
+
+CRITICAL: Use these ACTUAL Hope Hospital records in your evidence generation. This is real data from our database:
+
+${relevantData.patients && relevantData.patients.length > 0 ? `
+=== PATIENT RECORDS (Hope Hospital Database) ===
+${relevantData.patients.map((p, idx) => `
+Patient ${idx + 1}:
+- UHID: ${p.uhid}
+- Name: ${p.name}
+- Age/Gender: ${p.age} years, ${p.gender}
+- Contact: ${p.contactNumber}
+- Address: ${p.address}
+- Admission Date: ${p.admissionDate}
+${p.dischargeDate ? `- Discharge Date: ${p.dischargeDate}` : '- Status: Currently Admitted'}
+- Department: ${p.department}
+- Diagnosis: ${p.diagnosis}
+- Consulting Doctor: ${p.consultingDoctor}
+- Blood Group: ${p.bloodGroup}
+- Emergency Contact: ${p.emergencyContact}
+${p.insuranceProvider ? `- Insurance: ${p.insuranceProvider}, Policy: ${p.policyNumber}` : ''}
+`).join('\n')}
+` : ''}
+
+${relevantData.staff && relevantData.staff.length > 0 ? `
+=== STAFF RECORDS (Hope Hospital Database) ===
+${relevantData.staff.map((s, idx) => `
+Staff ${idx + 1}:
+- Employee ID: ${s.employeeId}
+- Name: ${s.name}
+- Designation: ${s.designation}
+- Department: ${s.department}
+- Qualification: ${s.qualification}
+- Joining Date: ${s.joiningDate}
+- Contact: ${s.contactNumber}
+- Email: ${s.email}
+${s.shift ? `- Shift: ${s.shift}` : ''}
+`).join('\n')}
+` : ''}
+
+${relevantData.equipment && relevantData.equipment.length > 0 ? `
+=== EQUIPMENT RECORDS (Hope Hospital Database) ===
+${relevantData.equipment.map((e, idx) => `
+Equipment ${idx + 1}:
+- Equipment ID: ${e.equipmentId}
+- Name: ${e.name}
+- Category: ${e.category}
+- Manufacturer: ${e.manufacturer}
+- Purchase Date: ${e.purchaseDate}
+- Last Calibration: ${e.lastCalibrationDate}
+- Next Calibration: ${e.nextCalibrationDate}
+- Location: ${e.location}
+- Status: ${e.status}
+`).join('\n')}
+` : ''}
+
+${relevantData.incidents && relevantData.incidents.length > 0 ? `
+=== INCIDENT RECORDS (Hope Hospital Database) ===
+${relevantData.incidents.map((i, idx) => `
+Incident ${idx + 1}:
+- Incident ID: ${i.incidentId}
+- Date/Time: ${i.date} at ${i.time}
+- Location: ${i.location}
+- Reported By: ${i.reportedBy}
+- Type: ${i.incidentType}
+- Description: ${i.description}
+- Action Taken: ${i.actionTaken}
+- Status: ${i.status}
+`).join('\n')}
+` : ''}
+
+INSTRUCTIONS FOR USING THIS DATA:
+1. Use EXACT names, UHIDs, employee IDs, and other identifiers from above
+2. Fill forms/registers with this actual data - do NOT invent fake data
+3. Create realistic filled formats showing these specific records
+4. If you need more entries than provided, you may add similar realistic entries following the same pattern
+5. Make the evidence look like actual hospital records, not templates
+6. Include specific dates, numbers, and details from the database
+7. Create various types of filled formats: registers, forms, reports, logs, checklists
+` : '';
+
+    return `You are an expert in NABH (National Accreditation Board for Hospitals and Healthcare Providers) accreditation documentation for ${hospitalConfig.name}.
+${dataContext}
 
 Generate a complete HTML document for the selected evidence item in ENGLISH ONLY (internal document).
 
@@ -1643,7 +1731,29 @@ Use EXACTLY this HTML template structure (fill in the content sections):
 </body>
 </html>
 
-Generate the complete HTML with all sections filled in appropriately based on the evidence item provided. Make the content detailed, practical, and ready for NABH assessment.`;
+Generate the complete HTML with all sections filled in appropriately based on the evidence item provided. Make the content detailed, practical, and ready for NABH assessment.
+
+${hospitalConfig.name === 'Hope Hospital' ? `
+SPECIFIC INSTRUCTIONS FOR HOPE HOSPITAL EVIDENCE:
+1. Create FILLED formats, NOT blank templates
+2. Use the patient/staff/equipment data provided above
+3. Generate realistic completed forms like:
+   - Patient Admission Register with actual entries
+   - Staff Training Records with actual names and dates
+   - Equipment Calibration Logs with actual equipment IDs
+   - Incident Report Forms with real incident data
+   - Medication Administration Records (MAR) with patient details
+   - Consent Forms with patient information filled in
+   - Assessment Forms with actual patient data
+   - Audit Checklists with observations marked
+4. Include multiple entries/records to show consistent documentation
+5. Make it look like actual working hospital records, not examples
+6. Use proper formatting: tables, checkboxes (✓), signatures, stamps
+7. Add realistic handwritten-style notes where appropriate
+8. Include serial numbers, page numbers, reference numbers
+` : ''}
+`;
+  };
 
   // Extract HTML from AI response (handles markdown code blocks)
   const extractHTMLFromResponse = (response: string): string => {
@@ -2004,18 +2114,20 @@ Generate the complete HTML with all sections filled in appropriately based on th
     const geminiApiKey = getGeminiApiKey();
     const claudeApiKey = getClaudeApiKey();
     console.log('API keys:', { gemini: !!geminiApiKey, claude: !!claudeApiKey });
-    const contentPrompt = getEvidenceDocumentPrompt();
 
     for (let i = 0; i < selectedItems.length; i++) {
       const item = selectedItems[i];
       setDocumentGenerationProgress({ current: i + 1, total: selectedItems.length });
+
+      // Get evidence-specific prompt with relevant data
+      const contentPrompt = getEvidenceDocumentPrompt(item.text);
 
       const userMessage = `Objective Element: ${objective?.description}
 
 Evidence Item to Generate:
 ${item.text}
 
-Generate complete, ready-to-use content/template for this evidence in ENGLISH ONLY (internal document) with the hospital header, footer, signature and stamp sections as specified.`;
+Generate complete, ready-to-use FILLED EVIDENCE with actual data from Hope Hospital database (NOT blank templates). Use the patient records, staff records, equipment records provided in the system prompt. Make it look like real hospital documentation with specific entries, dates, names, and numbers.`;
 
       try {
         let rawContent: string = '';
@@ -2183,13 +2295,13 @@ Generate complete, ready-to-use content/template for this evidence in ENGLISH ON
         throw new Error('Gemini API key not configured');
       }
 
-      const prompt = `${getEvidenceDocumentPrompt()}
+      const prompt = `${getEvidenceDocumentPrompt(customEvidencePrompt)}
 
 OBJECTIVE: ${objective?.code} - ${objective?.title}
 
 USER REQUEST: ${customEvidencePrompt}
 
-Generate a complete, professional HTML document for the above requirement. Include realistic dummy data, proper formatting, and all sections as specified in the template.`;
+Generate a complete, professional HTML document for the above requirement. Use ACTUAL data from Hope Hospital database provided in the system prompt (patient records, staff records, equipment records). Create FILLED formats with real entries, NOT blank templates. Make it look like authentic hospital documentation.`;
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
